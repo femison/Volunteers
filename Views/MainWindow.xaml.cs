@@ -141,5 +141,30 @@ namespace Volunteers
             LoginTextBox.Clear();
             PasswordBox.Clear();
         }
+
+        private void ShowPasswordCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            // Переносим пароль из PasswordBox в TextBox
+            ShowPasswordTextBox.Text = PasswordBox.Password;
+            // Показываем TextBox и скрываем PasswordBox
+            ShowPasswordTextBox.Visibility = Visibility.Visible;
+            PasswordBox.Visibility = Visibility.Collapsed;
+
+            // Устанавливаем фокус на TextBox
+            ShowPasswordTextBox.Focus();
+            ShowPasswordTextBox.CaretIndex = ShowPasswordTextBox.Text.Length;
+        }
+
+        private void ShowPasswordCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            // Переносим пароль из TextBox обратно в PasswordBox
+            PasswordBox.Password = ShowPasswordTextBox.Text;
+            // Показываем PasswordBox и скрываем TextBox
+            PasswordBox.Visibility = Visibility.Visible;
+            ShowPasswordTextBox.Visibility = Visibility.Collapsed;
+
+            // Устанавливаем фокус на PasswordBox
+            PasswordBox.Focus();
+        }
     }
 }
