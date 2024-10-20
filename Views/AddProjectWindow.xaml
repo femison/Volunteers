@@ -1,0 +1,41 @@
+﻿<!-- AddProjectWindow.xaml -->
+<Window x:Class="Volunteers.Views.AddProjectWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Добавить проект" Height="400" Width="500"
+        WindowStartupLocation="CenterOwner"
+        Background="#F0F4F8">
+
+    <Grid Margin="10">
+        <Border BorderBrush="#A8D5BA" BorderThickness="2" CornerRadius="10" Padding="20" Background="White">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Orientation="Vertical" Margin="10">
+
+                    <!-- Поля для ввода данных проекта -->
+                    <Label Content="Название проекта:"/>
+                    <TextBox x:Name="ProjectNameTextBox" />
+
+                    <Label Content="Дата начала:" Margin="10,10,0,0"/>
+                    <DatePicker x:Name="StartDatePicker" />
+
+                    <Label Content="Дата окончания:" Margin="10,10,0,0"/>
+                    <DatePicker x:Name="EndDatePicker" />
+
+                    <Label Content="Статус:" Margin="10,10,0,0"/>
+                    <ComboBox x:Name="StatusComboBox">
+                        <ComboBoxItem Content="Активен"/>
+                        <ComboBoxItem Content="Завершен"/>
+                        <ComboBoxItem Content="Отменен"/>
+                        <ComboBoxItem Content="Планируется"/>
+                    </ComboBox>
+
+                    <!-- Кнопки -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                        <Button Content="Добавить" Click="AddButton_Click" Style="{StaticResource AddButtonStyle}" Width="100" />
+                        <Button Content="Отмена" Click="CancelButton_Click" Style="{StaticResource DeleteButtonStyle}" Width="100" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

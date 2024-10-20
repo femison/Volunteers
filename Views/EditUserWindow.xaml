@@ -1,0 +1,66 @@
+﻿<!-- Views/EditUserWindow.xaml -->
+<Window x:Class="Volunteers.Views.EditUserWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Редактировать пользователя" Height="600" Width="400"
+        WindowStartupLocation="CenterOwner"
+        Background="#F0F4F8">
+
+    <Grid Margin="10">
+        <Border BorderBrush="#A8D5BA" BorderThickness="2" CornerRadius="10" Padding="20" Background="White">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Orientation="Vertical" Margin="10">
+
+                    <!-- Поля для ввода данных пользователя -->
+                    <Label Content="Имя:"/>
+                    <TextBox x:Name="NameTextBox" />
+
+                    <Label Content="Фамилия:"/>
+                    <TextBox x:Name="SurnameTextBox" />
+
+                    <Label Content="Навыки:"/>
+                    <TextBox x:Name="UserSkillsTextBox" AcceptsReturn="True" Height="60"/>
+
+                    <Label Content="Email:"/>
+                    <TextBox x:Name="EmailTextBox" />
+
+                    <Label Content="Телефон:"/>
+                    <TextBox x:Name="PhoneTextBox" />
+
+                    <Label Content="Дата рождения:"/>
+                    <DatePicker x:Name="DateOfBirthPicker" />
+
+                    <Label Content="Пол:"/>
+                    <ComboBox x:Name="GenderComboBox">
+                        <ComboBoxItem Content="м"/>
+                        <ComboBoxItem Content="ж"/>
+                    </ComboBox>
+
+                    <Label Content="Адрес:"/>
+                    <TextBox x:Name="AddressTextBox" AcceptsReturn="True" Height="60"/>
+
+                    <Label Content="Роль:"/>
+                    <ComboBox x:Name="RoleComboBox">
+                        <ComboBoxItem Content="Волонтер"/>
+                        <ComboBoxItem Content="Администратор"/>
+                    </ComboBox>
+
+                    <Label Content="Логин:"/>
+                    <TextBox x:Name="LoginTextBox" IsReadOnly="True" />
+
+                    <!-- Новый пароль (опционально) -->
+                    <Label Content="Новый пароль:" Margin="0,10,0,0"/>
+                    <PasswordBox x:Name="NewPasswordBox" />
+
+                    
+
+                    <!-- Кнопки -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                        <Button Content="Сохранить" Click="SaveButton_Click" Style="{StaticResource AddButtonStyle}" Width="100" />
+                        <Button Content="Отмена" Click="CancelButton_Click" Style="{StaticResource DeleteButtonStyle}" Width="100" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>
