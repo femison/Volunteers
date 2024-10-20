@@ -5,11 +5,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Панель Администратора" Height="700" Width="1200"
         WindowStartupLocation="CenterScreen"
-        Closed="Window_Closed"
-        >
+        Closed="Window_Closed">
 
     <Window.Resources>
-        <!-- Стиль для TextBlock с переносом текста -->
+        <!-- Стили для TextBlock в DataGrid -->
         <Style x:Key="DataGridTextBlockStyle" TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -55,35 +54,30 @@
         <!-- Стиль для Primary кнопок -->
         <Style TargetType="Button" x:Key="PrimaryButtonStyle" BasedOn="{StaticResource BaseButtonStyle}">
             <Setter Property="Background" Value="#007BFF"/>
-            <!-- Ярко-синий -->
             <Setter Property="Foreground" Value="White"/>
         </Style>
 
         <!-- Стиль для Secondary кнопок -->
         <Style TargetType="Button" x:Key="SecondaryButtonStyle" BasedOn="{StaticResource BaseButtonStyle}">
             <Setter Property="Background" Value="#28A745"/>
-            <!-- Ярко-зеленый -->
             <Setter Property="Foreground" Value="White"/>
         </Style>
 
         <!-- Стиль для Danger кнопок -->
         <Style TargetType="Button" x:Key="DangerButtonStyle" BasedOn="{StaticResource BaseButtonStyle}">
             <Setter Property="Background" Value="#DC3545"/>
-            <!-- Ярко-красный -->
             <Setter Property="Foreground" Value="White"/>
         </Style>
 
         <!-- Стиль для Search кнопок -->
         <Style TargetType="Button" x:Key="SearchButtonStyle" BasedOn="{StaticResource BaseButtonStyle}">
             <Setter Property="Background" Value="#6C757D"/>
-            <!-- Серый -->
             <Setter Property="Foreground" Value="White"/>
         </Style>
 
         <!-- Стиль для заголовков DataGrid -->
         <Style x:Key="DataGridHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="#BB86FC"/>
-            <!-- Насыщенный фиолетовый -->
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="14"/>
@@ -100,11 +94,9 @@
             <Setter Property="Foreground" Value="#333333"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Height" Value="Auto"/>
-            <!-- Автоматическая высота строки -->
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="#BB86FC"/>
-                    <!-- Насыщенный фиолетовый для выделенной строки -->
                     <Setter Property="Foreground" Value="White"/>
                 </Trigger>
                 <Trigger Property="IsMouseOver" Value="True">
@@ -123,8 +115,8 @@
             <Setter Property="TextAlignment" Value="Center"/>
         </Style>
 
-        <!-- Шаблон для кнопок действий в DataGrid -->
-        <DataTemplate x:Key="ActionButtonsTemplate">
+        <!-- Шаблон для кнопок действий в DataGrid (Пользователи) -->
+        <DataTemplate x:Key="UserActionButtonsTemplate">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <!-- Кнопка Редактировать -->
                 <Button ToolTip="Редактировать" 
@@ -140,6 +132,32 @@
                 <Button ToolTip="Удалить" 
                         Click="DeleteUserButton_Click" 
                         Tag="{Binding UserID}" 
+                        Style="{StaticResource DangerButtonStyle}" 
+                        Width="30" Height="30" 
+                        Padding="0" 
+                        Margin="2">
+                    <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
+                </Button>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Шаблон для кнопок действий в DataGrid (Проекты) -->
+        <DataTemplate x:Key="ProjectActionButtonsTemplate">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <!-- Кнопка Редактировать -->
+                <Button ToolTip="Редактировать" 
+                        Click="EditProjectButton_Click" 
+                        Tag="{Binding ProjectID}" 
+                        Style="{StaticResource SecondaryButtonStyle}" 
+                        Width="30" Height="30" 
+                        Padding="0" 
+                        Margin="2">
+                    <materialDesign:PackIcon Kind="Pencil" Width="16" Height="16"/>
+                </Button>
+                <!-- Кнопка Удалить -->
+                <Button ToolTip="Удалить" 
+                        Click="DeleteProjectButton_Click" 
+                        Tag="{Binding ProjectID}" 
                         Style="{StaticResource DangerButtonStyle}" 
                         Width="30" Height="30" 
                         Padding="0" 
@@ -166,18 +184,28 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Панель поиска -->
+                    <!-- Панель поиска пользователей -->
                     <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,0,10">
                         <TextBox x:Name="UserSearchTextBox" Width="300" Height="40" 
                                  materialDesign:HintAssist.Hint="Поиск пользователей..." 
                                  Margin="0,0,10,0" 
                                  VerticalContentAlignment="Center" 
                                  FontSize="16"
-                                 Padding="10"/>
+                                 Padding="10"
+                                 KeyDown="UserSearchTextBox_KeyDown"/>
+                        <!-- Обработчик KeyDown -->
                         <Button Content="Поиск" 
                                 Width="120" 
                                 Height="40" 
-                                Style="{StaticResource SearchButtonStyle}"/>
+                                Style="{StaticResource SearchButtonStyle}"
+                                Click="UserSearchButton_Click"/>
+                        <!-- Обработчик поиска пользователей -->
+                        <Button Content="Сбросить" 
+                                Width="120" 
+                                Height="40" 
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="UserResetButton_Click"/>
+                        <!-- Обработчик сброса поиска пользователей -->
                     </StackPanel>
 
                     <!-- DataGrid для отображения пользователей -->
@@ -194,7 +222,9 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding UserID}" Width="Auto"
                                                 ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
-                            <DataGridTextColumn Header="Имя и Фамилия" Binding="{Binding FullName}" Width="*"
+                            <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*"
+                                                ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                            <DataGridTextColumn Header="Фамилия" Binding="{Binding Surname}" Width="*"
                                                 ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <DataGridTextColumn Header="Навыки" Binding="{Binding UserSkills}" Width="*"
                                                 ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
@@ -212,7 +242,7 @@
                                                 ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <!-- Столбец Действий -->
                             <DataGridTemplateColumn Header="Действия" Width="70" 
-                                                    CellTemplate="{StaticResource ActionButtonsTemplate}"/>
+                                                    CellTemplate="{StaticResource UserActionButtonsTemplate}"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -236,61 +266,68 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Панель поиска -->
+                    <!-- Панель поиска проектов -->
                     <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,0,10">
                         <TextBox x:Name="ProjectSearchTextBox" Width="300" Height="40" 
-                     materialDesign:HintAssist.Hint="Поиск проектов..." 
-                     Margin="0,0,10,0" 
-                     VerticalContentAlignment="Center" 
-                     FontSize="16"
-                     Padding="10"/>
+                                 materialDesign:HintAssist.Hint="Поиск проектов..." 
+                                 Margin="0,0,10,0" 
+                                 VerticalContentAlignment="Center" 
+                                 FontSize="16"
+                                 Padding="10"
+                                 KeyDown="ProjectSearchTextBox_KeyDown"/>
+                        <!-- Обработчик KeyDown -->
                         <Button Content="Поиск" 
-                    Width="120" 
-                    Height="40" 
-                    Style="{StaticResource SearchButtonStyle}"
-                    Click="ProjectSearchButton_Click"/>
-                        <!-- Добавлен обработчик события -->
+                                Width="120" 
+                                Height="40" 
+                                Style="{StaticResource SearchButtonStyle}"
+                                Click="ProjectSearchButton_Click"/>
+                        <!-- Обработчик поиска проектов -->
+                        <Button Content="Сбросить" 
+                                Width="120" 
+                                Height="40" 
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="ProjectResetButton_Click"/>
+                        <!-- Обработчик сброса поиска проектов -->
                     </StackPanel>
 
-                    <!-- DataGrid для отображения проектов волонтера -->
+                    <!-- DataGrid для отображения проектов -->
                     <DataGrid x:Name="ProjectsDataGrid" 
-                  Grid.Row="1"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  HeadersVisibility="Column"
-                  ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
-                  RowStyle="{StaticResource DataGridRowStyle}"
-                  SelectionMode="Single"
-                  AlternatingRowBackground="#F3F3F3"
-                  Margin="0,0,0,10">
+                              Grid.Row="1"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
+                              RowStyle="{StaticResource DataGridRowStyle}"
+                              SelectionMode="Single"
+                              AlternatingRowBackground="#F3F3F3"
+                              Margin="0,0,0,10">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding ProjectID}" Width="Auto"
-                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                                                ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <DataGridTextColumn Header="Название" Binding="{Binding ProjectName}" Width="*"
-                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                                                ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <DataGridTextColumn Header="Дата начала" Binding="{Binding StartDate, StringFormat=d}" Width="*"
-                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                                                ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <DataGridTextColumn Header="Дата окончания" Binding="{Binding EndDate, StringFormat=d}" Width="*"
-                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                                                ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*"
-                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                                                ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <!-- Столбец Действий -->
                             <DataGridTemplateColumn Header="Действия" Width="70" 
-                                        CellTemplate="{StaticResource ActionButtonsTemplate}"/>
+                                                    CellTemplate="{StaticResource ProjectActionButtonsTemplate}"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
                     <!-- Кнопка "Добавить проект" -->
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="Добавить проект"
-                    Click="AddProjectButton_Click"
-                    Width="220"
-                    Height="45"
-                    Style="{StaticResource PrimaryButtonStyle}"/>
+                                Click="AddProjectButton_Click"
+                                Width="220"
+                                Height="45"
+                                Style="{StaticResource PrimaryButtonStyle}"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
-
 
             <!-- Дополнительные вкладки можно добавить здесь -->
             <!-- Например, вкладка "Задачи" и т.д. -->

@@ -3,10 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input; // Для обработки клавиш
 using MySql.Data.MySqlClient;
 using Volunteers.Data;
 using Volunteers.Models;
-using Volunteers.Views;
 
 namespace Volunteers.Views
 {
@@ -371,6 +371,113 @@ namespace Volunteers.Views
         {
             ProjectSearchTextBox.Clear(); // Очистить поле поиска
             LoadProjectsData();           // Загрузить все проекты
+        }
+
+        /// <summary>
+        /// Обработчик нажатия клавиши Enter в поле поиска проектов.
+        /// Позволяет запускать поиск по нажатию Enter.
+        /// </summary>
+        private void ProjectSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                ProjectSearchButton_Click(sender, e);
+            }
+        }
+
+        #endregion
+
+        #region Поиск Пользователей
+
+        /// <summary>
+        /// Обработчик нажатия кнопки "Поиск" для пользователей.
+        /// Выполняет поиск пользователей по имени, фамилии, email и роли.
+        /// </summary>
+        private void UserSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            string searchQuery = UserSearchTextBox.Text.Trim();
+
+            if (string.IsNullOrEmpty(searchQuery))
+            {
+                // Если поле поиска пустое, загрузить всех пользователей
+                LoadUsersData();
+                return;
+            }
+
+            // Выполнить поиск пользователей по имени, фамилии, email или роли
+            try
+            {
+                using (MySqlConnection connection = Database.GetConnection())
+                {
+                    connection.Open();
+                    string query = @"SELECT u.UserID, u.Name, u.Surname, u.UserSkills, u.Email, u.Phone, 
+                                     u.DateOfBirth, u.Gender, u.Address, u.Role 
+                                     FROM users u 
+                                     WHERE u.Name LIKE @Search 
+                                     OR u.Surname LIKE @Search 
+                                     OR u.Email LIKE @Search 
+                                     OR u.Role LIKE @Search";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@Search", "%" + searchQuery + "%");
+
+                    List<User> filteredUsers = new List<User>();
+
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            User user = new User
+                            {
+                                UserID = reader.GetInt32("UserID"),
+                                Name = reader.GetString("Name"),
+                                Surname = reader.GetString("Surname"),
+                                UserSkills = reader.IsDBNull(reader.GetOrdinal("UserSkills")) ? "" : reader.GetString("UserSkills"),
+                                Email = reader.GetString("Email"),
+                                Phone = reader.GetString("Phone"),
+                                DateOfBirth = reader.GetDateTime("DateOfBirth"),
+                                Gender = reader.GetString("Gender"),
+                                Address = reader.IsDBNull(reader.GetOrdinal("Address")) ? "" : reader.GetString("Address"),
+                                Role = reader.GetString("Role")
+                            };
+                            filteredUsers.Add(user);
+                        }
+                    }
+
+                    UsersDataGrid.ItemsSource = filteredUsers;
+
+                    // Если не найдено ни одного пользователя, уведомить пользователя
+                    if (filteredUsers.Count == 0)
+                    {
+                        MessageBox.Show("Ни одного пользователя не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+            }
+            catch (MySqlException ex)
+            {
+                MessageBox.Show("Ошибка при поиске пользователей: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Обработчик нажатия кнопки "Сбросить" для пользователей.
+        /// Очищает поле поиска и загружает всех пользователей.
+        /// </summary>
+        private void UserResetButton_Click(object sender, RoutedEventArgs e)
+        {
+            UserSearchTextBox.Clear(); // Очистить поле поиска
+            LoadUsersData();           // Загрузить всех пользователей
+        }
+
+        /// <summary>
+        /// Обработчик нажатия клавиши Enter в поле поиска пользователей.
+        /// Позволяет запускать поиск по нажатию Enter.
+        /// </summary>
+        private void UserSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                UserSearchButton_Click(sender, e);
+            }
         }
 
         #endregion
