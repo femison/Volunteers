@@ -1,4 +1,4 @@
-﻿// AdminWindow.xaml.cs
+﻿// Views/AdminWindow.xaml.cs
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -15,6 +15,7 @@ namespace Volunteers.Views
         private User currentUser;
         private List<User> usersList;
         private List<Project> projectsList;
+        private List<TaskModel> tasksList; // Список задач
 
         public AdminWindow(User user)
         {
@@ -22,6 +23,7 @@ namespace Volunteers.Views
             currentUser = user;
             LoadUsersData();
             LoadProjectsData();
+            LoadTasksData(); // Загружаем задачи при инициализации
         }
 
         #region Управление Пользователями
@@ -166,6 +168,97 @@ namespace Volunteers.Views
             }
         }
 
+        /// <summary>
+        /// Обработчик нажатия кнопки "Поиск" для пользователей.
+        /// Выполняет поиск пользователей по имени, фамилии, email и роли.
+        /// </summary>
+        private void UserSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            string searchQuery = UserSearchTextBox.Text.Trim();
+
+            if (string.IsNullOrEmpty(searchQuery))
+            {
+                // Если поле поиска пустое, загрузить всех пользователей
+                LoadUsersData();
+                return;
+            }
+
+            // Выполнить поиск пользователей по имени, фамилии, email или роли
+            try
+            {
+                using (MySqlConnection connection = Database.GetConnection())
+                {
+                    connection.Open();
+                    string query = @"SELECT u.UserID, u.Name, u.Surname, u.UserSkills, u.Email, u.Phone, 
+                                     u.DateOfBirth, u.Gender, u.Address, u.Role 
+                                     FROM users u 
+                                     WHERE u.Name LIKE @Search 
+                                     OR u.Surname LIKE @Search 
+                                     OR u.Email LIKE @Search 
+                                     OR u.Role LIKE @Search";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@Search", "%" + searchQuery + "%");
+
+                    List<User> filteredUsers = new List<User>();
+
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            User user = new User
+                            {
+                                UserID = reader.GetInt32("UserID"),
+                                Name = reader.GetString("Name"),
+                                Surname = reader.GetString("Surname"),
+                                UserSkills = reader.IsDBNull(reader.GetOrdinal("UserSkills")) ? "" : reader.GetString("UserSkills"),
+                                Email = reader.GetString("Email"),
+                                Phone = reader.GetString("Phone"),
+                                DateOfBirth = reader.GetDateTime("DateOfBirth"),
+                                Gender = reader.GetString("Gender"),
+                                Address = reader.IsDBNull(reader.GetOrdinal("Address")) ? "" : reader.GetString("Address"),
+                                Role = reader.GetString("Role")
+                            };
+                            filteredUsers.Add(user);
+                        }
+                    }
+
+                    UsersDataGrid.ItemsSource = filteredUsers;
+
+                    // Если не найдено ни одного пользователя, уведомить пользователя
+                    if (filteredUsers.Count == 0)
+                    {
+                        MessageBox.Show("Ни одного пользователя не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+            }
+            catch (MySqlException ex)
+            {
+                MessageBox.Show("Ошибка при поиске пользователей: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Обработчик нажатия кнопки "Сбросить" для пользователей.
+        /// Очищает поле поиска и загружает всех пользователей.
+        /// </summary>
+        private void UserResetButton_Click(object sender, RoutedEventArgs e)
+        {
+            UserSearchTextBox.Clear(); // Очистить поле поиска
+            LoadUsersData();           // Загрузить всех пользователей
+        }
+
+        /// <summary>
+        /// Обработчик нажатия клавиши Enter в поле поиска пользователей.
+        /// Позволяет запускать поиск по нажатию Enter.
+        /// </summary>
+        private void UserSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                UserSearchButton_Click(sender, e);
+            }
+        }
+
         #endregion
 
         #region Управление Проектами
@@ -208,6 +301,9 @@ namespace Volunteers.Views
                     MessageBox.Show("Ошибка загрузки данных проектов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+
+            // После загрузки проектов, обновляем задачи
+            LoadTasksData();
         }
 
         /// <summary>
@@ -387,96 +483,235 @@ namespace Volunteers.Views
 
         #endregion
 
-        #region Поиск Пользователей
+        #region Управление Задачами
 
         /// <summary>
-        /// Обработчик нажатия кнопки "Поиск" для пользователей.
-        /// Выполняет поиск пользователей по имени, фамилии, email и роли.
+        /// Загружает данные задач из базы данных и отображает их в DataGrid.
         /// </summary>
-        private void UserSearchButton_Click(object sender, RoutedEventArgs e)
+        private void LoadTasksData()
         {
-            string searchQuery = UserSearchTextBox.Text.Trim();
+            tasksList = new List<TaskModel>();
 
-            if (string.IsNullOrEmpty(searchQuery))
+            using (MySqlConnection connection = Database.GetConnection())
             {
-                // Если поле поиска пустое, загрузить всех пользователей
-                LoadUsersData();
-                return;
-            }
-
-            // Выполнить поиск пользователей по имени, фамилии, email или роли
-            try
-            {
-                using (MySqlConnection connection = Database.GetConnection())
+                try
                 {
                     connection.Open();
-                    string query = @"SELECT u.UserID, u.Name, u.Surname, u.UserSkills, u.Email, u.Phone, 
-                                     u.DateOfBirth, u.Gender, u.Address, u.Role 
-                                     FROM users u 
-                                     WHERE u.Name LIKE @Search 
-                                     OR u.Surname LIKE @Search 
-                                     OR u.Email LIKE @Search 
-                                     OR u.Role LIKE @Search";
+                    string query = @"SELECT t.TaskID, p.ProjectName, t.Description, t.Status, ti.Location, ti.Date
+                                     FROM tasks t
+                                     JOIN projects p ON t.ProjectID = p.ProjectID
+                                     JOIN taskinfo ti ON t.TaskID = ti.TaskID";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
-                    cmd.Parameters.AddWithValue("@Search", "%" + searchQuery + "%");
-
-                    List<User> filteredUsers = new List<User>();
 
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            User user = new User
+                            TaskModel task = new TaskModel
                             {
-                                UserID = reader.GetInt32("UserID"),
-                                Name = reader.GetString("Name"),
-                                Surname = reader.GetString("Surname"),
-                                UserSkills = reader.IsDBNull(reader.GetOrdinal("UserSkills")) ? "" : reader.GetString("UserSkills"),
-                                Email = reader.GetString("Email"),
-                                Phone = reader.GetString("Phone"),
-                                DateOfBirth = reader.GetDateTime("DateOfBirth"),
-                                Gender = reader.GetString("Gender"),
-                                Address = reader.IsDBNull(reader.GetOrdinal("Address")) ? "" : reader.GetString("Address"),
-                                Role = reader.GetString("Role")
+                                TaskID = reader.GetInt32("TaskID"),
+                                ProjectName = reader.GetString("ProjectName"),
+                                Description = reader.GetString("Description"),
+                                Status = reader.GetString("Status"),
+                                Location = reader.GetString("Location"),
+                                Date = reader.GetDateTime("Date")
                             };
-                            filteredUsers.Add(user);
+                            tasksList.Add(task);
                         }
                     }
 
-                    UsersDataGrid.ItemsSource = filteredUsers;
+                    TasksDataGrid.ItemsSource = tasksList;
+                }
+                catch (MySqlException ex)
+                {
+                    MessageBox.Show("Ошибка загрузки данных задач: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
 
-                    // Если не найдено ни одного пользователя, уведомить пользователя
-                    if (filteredUsers.Count == 0)
+        /// <summary>
+        /// Открывает окно для добавления новой задачи.
+        /// </summary>
+        private void AddTaskButton_Click(object sender, RoutedEventArgs e)
+        {
+            AddTaskWindow addTaskWindow = new AddTaskWindow(projectsList); // Передаем список проектов для выбора
+            addTaskWindow.Owner = this;
+
+            if (addTaskWindow.ShowDialog() == true)
+            {
+                LoadTasksData();
+            }
+        }
+
+        /// <summary>
+        /// Открывает окно для редактирования выбранной задачи.
+        /// </summary>
+        private void EditTaskButton_Click(object sender, RoutedEventArgs e)
+        {
+            int taskId = Convert.ToInt32((sender as Button).Tag);
+            TaskModel selectedTask = tasksList.Find(t => t.TaskID == taskId);
+
+            if (selectedTask != null)
+            {
+                EditTaskWindow editTaskWindow = new EditTaskWindow(selectedTask, projectsList);
+                editTaskWindow.Owner = this;
+
+                if (editTaskWindow.ShowDialog() == true)
+                {
+                    LoadTasksData();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Удаляет выбранную задачу из базы данных после подтверждения.
+        /// </summary>
+        private void DeleteTaskButton_Click(object sender, RoutedEventArgs e)
+        {
+            int taskId = Convert.ToInt32((sender as Button).Tag);
+
+            // Подтверждение удаления
+            MessageBoxResult result = MessageBox.Show("Вы уверены, что хотите удалить эту задачу?", "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                if (DeleteTaskFromDatabase(taskId))
+                {
+                    MessageBox.Show("Задача успешно удалена.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                    LoadTasksData();
+                }
+                else
+                {
+                    MessageBox.Show("Ошибка при удалении задачи.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Удаляет задачу из базы данных вместе с информацией о задаче.
+        /// </summary>
+        private bool DeleteTaskFromDatabase(int taskId)
+        {
+            using (MySqlConnection connection = Database.GetConnection())
+            {
+                try
+                {
+                    connection.Open();
+                    MySqlTransaction transaction = connection.BeginTransaction();
+
+                    // Удаление из таблицы user_tasks
+                    string deleteUserTasksQuery = "DELETE FROM user_tasks WHERE TaskID=@TaskID";
+                    MySqlCommand cmdUserTasks = new MySqlCommand(deleteUserTasksQuery, connection, transaction);
+                    cmdUserTasks.Parameters.AddWithValue("@TaskID", taskId);
+                    cmdUserTasks.ExecuteNonQuery();
+
+                    // Удаление из taskinfo
+                    string deleteTaskInfoQuery = "DELETE FROM taskinfo WHERE TaskID=@TaskID";
+                    MySqlCommand cmdTaskInfo = new MySqlCommand(deleteTaskInfoQuery, connection, transaction);
+                    cmdTaskInfo.Parameters.AddWithValue("@TaskID", taskId);
+                    cmdTaskInfo.ExecuteNonQuery();
+
+                    // Удаление из tasks
+                    string deleteTaskQuery = "DELETE FROM tasks WHERE TaskID=@TaskID";
+                    MySqlCommand cmdTask = new MySqlCommand(deleteTaskQuery, connection, transaction);
+                    cmdTask.Parameters.AddWithValue("@TaskID", taskId);
+                    cmdTask.ExecuteNonQuery();
+
+                    transaction.Commit();
+                    return true;
+                }
+                catch (MySqlException ex)
+                {
+                    MessageBox.Show("Ошибка при удалении задачи: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Обработчик нажатия кнопки "Поиск" для задач.
+        /// Выполняет поиск задач по описанию, статусу или проекту.
+        /// </summary>
+        private void TaskSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            string searchQuery = TaskSearchTextBox.Text.Trim();
+
+            if (string.IsNullOrEmpty(searchQuery))
+            {
+                // Если поле поиска пустое, загрузить все задачи
+                LoadTasksData();
+                return;
+            }
+
+            // Выполнить поиск задач по описанию, статусу или названию проекта
+            try
+            {
+                using (MySqlConnection connection = Database.GetConnection())
+                {
+                    connection.Open();
+                    string query = @"SELECT t.TaskID, p.ProjectName, t.Description, t.Status, ti.Location, ti.Date
+                                     FROM tasks t
+                                     JOIN projects p ON t.ProjectID = p.ProjectID
+                                     JOIN taskinfo ti ON t.TaskID = ti.TaskID
+                                     WHERE t.Description LIKE @Search 
+                                     OR t.Status LIKE @Search 
+                                     OR p.ProjectName LIKE @Search";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@Search", "%" + searchQuery + "%");
+
+                    List<TaskModel> filteredTasks = new List<TaskModel>();
+
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
-                        MessageBox.Show("Ни одного пользователя не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
+                        while (reader.Read())
+                        {
+                            TaskModel task = new TaskModel
+                            {
+                                TaskID = reader.GetInt32("TaskID"),
+                                ProjectName = reader.GetString("ProjectName"),
+                                Description = reader.GetString("Description"),
+                                Status = reader.GetString("Status"),
+                                Location = reader.GetString("Location"),
+                                Date = reader.GetDateTime("Date")
+                            };
+                            filteredTasks.Add(task);
+                        }
+                    }
+
+                    TasksDataGrid.ItemsSource = filteredTasks;
+
+                    // Если не найдено ни одной задачи, уведомить пользователя
+                    if (filteredTasks.Count == 0)
+                    {
+                        MessageBox.Show("Ни одной задачи не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                 }
             }
             catch (MySqlException ex)
             {
-                MessageBox.Show("Ошибка при поиске пользователей: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Ошибка при поиске задач: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         /// <summary>
-        /// Обработчик нажатия кнопки "Сбросить" для пользователей.
-        /// Очищает поле поиска и загружает всех пользователей.
+        /// Обработчик нажатия кнопки "Сбросить" для задач.
+        /// Очищает поле поиска и загружает все задачи.
         /// </summary>
-        private void UserResetButton_Click(object sender, RoutedEventArgs e)
+        private void TaskResetButton_Click(object sender, RoutedEventArgs e)
         {
-            UserSearchTextBox.Clear(); // Очистить поле поиска
-            LoadUsersData();           // Загрузить всех пользователей
+            TaskSearchTextBox.Clear(); // Очистить поле поиска
+            LoadTasksData();           // Загрузить все задачи
         }
 
         /// <summary>
-        /// Обработчик нажатия клавиши Enter в поле поиска пользователей.
+        /// Обработчик нажатия клавиши Enter в поле поиска задач.
         /// Позволяет запускать поиск по нажатию Enter.
         /// </summary>
-        private void UserSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        private void TaskSearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                UserSearchButton_Click(sender, e);
+                TaskSearchButton_Click(sender, e);
             }
         }
 
