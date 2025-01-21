@@ -18,13 +18,16 @@ namespace Volunteers.Views
         private List<TaskModel> tasksList; // Список задач
 
         public AdminWindow(User user)
-        {
+{
             InitializeComponent();
             currentUser = user;
             LoadUsersData();
             LoadProjectsData();
-            LoadTasksData(); // Загружаем задачи при инициализации
-        }
+            LoadTasksData();
+            LoadAccounts();
+            LoadUserTasks(); // Добавьте вызов загрузки назначений
+}
+
 
         #region Управление Пользователями
 
@@ -74,6 +77,7 @@ namespace Volunteers.Views
                 }
             }
         }
+
 
         /// <summary>
         /// Открывает окно для добавления нового пользователя.
@@ -734,5 +738,179 @@ namespace Volunteers.Views
                 }
             }
         }
+        private void LoadAccounts()
+        {
+            try
+            {
+                using (MySqlConnection connection = Database.GetConnection())
+                {
+                    connection.Open();
+                    string query = @"SELECT u.UserID, u.Name, u.Surname, uc.Login, uc.Password 
+                           FROM users u
+                           INNER JOIN usercredentials uc ON u.UserID = uc.UserID
+                           ORDER BY u.UserID";
+
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    MySqlDataReader reader = cmd.ExecuteReader();
+
+                    var accounts = new List<UserAccount>();
+                    while (reader.Read())
+                    {
+                        accounts.Add(new UserAccount
+                        {
+                            UserID = reader.GetInt32("UserID"),
+                            Name = reader.GetString("Name"),
+                            Surname = reader.GetString("Surname"),
+                            Login = reader.GetString("Login"),
+                            Password = reader.GetString("Password")
+                        });
+                    }
+
+                    AccountsDataGrid.ItemsSource = accounts;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка загрузки данных: {ex.Message}", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void TogglePasswordVisibility_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.CommandParameter is UserAccount account)
+            {
+                account.IsPasswordVisible = !account.IsPasswordVisible;
+            }
+        }
+
+        // В AdminWindow.xaml.cs
+        private void AccountSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            string searchQuery = AccountSearchTextBox.Text.Trim();
+
+            if (string.IsNullOrEmpty(searchQuery))
+            {
+                LoadAccounts();
+                return;
+            }
+
+            var filtered = ((List<UserAccount>)AccountsDataGrid.ItemsSource)
+                .Where(a => a.Name.Contains(searchQuery) ||
+                           a.Surname.Contains(searchQuery) ||
+                           a.Login.Contains(searchQuery))
+                .ToList();
+
+            AccountsDataGrid.ItemsSource = filtered;
+        }
+
+        private void AccountResetButton_Click(object sender, RoutedEventArgs e)
+        {
+            AccountSearchTextBox.Clear();
+            LoadAccounts();
+        }
+
+        private void AccountSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                AccountSearchButton_Click(sender, e);
+            }
+        }
+        private List<UserTaskAssignment> _allUserTasks = new List<UserTaskAssignment>();
+        // Загрузка данных
+        private void LoadUserTasks()
+        {
+            try
+            {
+                using (MySqlConnection connection = Database.GetConnection())
+                {
+                    connection.Open();
+                    string query = @"SELECT 
+                                ut.UserTaskID, 
+                                CONCAT(u.Name, ' ', u.Surname) AS FullName, 
+                                t.Description, 
+                                p.ProjectName 
+                            FROM user_tasks ut
+                            JOIN users u ON ut.UserID = u.UserID
+                            JOIN tasks t ON ut.TaskID = t.TaskID
+                            JOIN projects p ON ut.ProjectID = p.ProjectID";
+
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    MySqlDataReader reader = cmd.ExecuteReader();
+
+                    _allUserTasks.Clear();
+                    while (reader.Read())
+                    {
+                        _allUserTasks.Add(new UserTaskAssignment
+                        {
+                            UserTaskID = reader.GetInt32("UserTaskID"),
+                            FullName = reader.GetString("FullName"),
+                            Description = reader.GetString("Description"),
+                            ProjectName = reader.GetString("ProjectName")
+                        });
+                    }
+
+                    UserTasksDataGrid.ItemsSource = _allUserTasks;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка загрузки назначений: {ex.Message}", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void UserTaskSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyUserTaskFilter();
+        }
+
+        private void UserTaskResetButton_Click(object sender, RoutedEventArgs e)
+        {
+            UserTaskSearchTextBox.Clear();
+            UserTasksDataGrid.ItemsSource = _allUserTasks;
+        }
+
+        private void UserTaskSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                ApplyUserTaskFilter();
+            }
+        }
+
+        private void ApplyUserTaskFilter()
+        {
+            string searchText = UserTaskSearchTextBox.Text.Trim().ToLower();
+
+            if (string.IsNullOrEmpty(searchText))
+            {
+                UserTasksDataGrid.ItemsSource = _allUserTasks;
+                return;
+            }
+
+            var filtered = _allUserTasks
+                .Where(task =>
+                    (task.FullName?.ToLower().Contains(searchText) ?? false) ||
+                    (task.Description?.ToLower().Contains(searchText) ?? false) ||
+                    (task.ProjectName?.ToLower().Contains(searchText) ?? false))
+                .ToList();
+
+            UserTasksDataGrid.ItemsSource = filtered;
+        }
+
+
+        private void AddUserTaskButton_Click(object sender, RoutedEventArgs e)
+        {
+            //Добавление задачи пользователю
+        }
+        private void RefreshUserTasksButton_Click(object sender, RoutedEventArgs e)
+        {
+            LoadUserTasks();
+        }
+
     }
-}
+    
+
+    }

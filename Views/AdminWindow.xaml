@@ -13,6 +13,7 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="ToolTip" Value="{Binding Path=Text, RelativeSource={RelativeSource Self}}"/>
+            
         </Style>
 
         <!-- Базовый стиль для кнопок с использованием ControlTemplate -->
@@ -352,6 +353,12 @@
             <!-- Вкладка "Задачи" -->
             <TabItem Header="Задачи">
                 <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="380*"/>
+                        <ColumnDefinition Width="13*"/>
+                        <ColumnDefinition Width="18*"/>
+                        <ColumnDefinition Width="1143*"/>
+                    </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -359,7 +366,7 @@
                     </Grid.RowDefinitions>
 
                     <!-- Панель поиска задач -->
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,0,10" Grid.Column="3">
                         <TextBox x:Name="TaskSearchTextBox" Width="300" Height="40" 
                                  materialDesign:HintAssist.Hint="Поиск задач..." 
                                  Margin="0,0,10,0" 
@@ -389,7 +396,7 @@
                               RowStyle="{StaticResource DataGridRowStyle}"
                               SelectionMode="Single"
                               AlternatingRowBackground="#F3F3F3"
-                              Margin="0,0,0,10">
+                              Margin="0,0,0,10" Grid.ColumnSpan="4">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding TaskID}" Width="Auto"
                                                 ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
@@ -410,7 +417,7 @@
                     </DataGrid>
 
                     <!-- Кнопка "Добавить задачу" -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left" Grid.Column="3" Margin="919,653,0,0">
                         <Button Content="Добавить задачу"
                                 Click="AddTaskButton_Click"
                                 Width="220"
@@ -418,6 +425,143 @@
                                 Style="{StaticResource PrimaryButtonStyle}"/>
                     </StackPanel>
                 </Grid>
+            </TabItem>
+            <TabItem Header="Назначение задач">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Панель поиска -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
+                        <TextBox x:Name="UserTaskSearchTextBox" 
+                     Width="300" 
+                     Height="40"
+                     materialDesign:HintAssist.Hint="Поиск по назначениям..."
+                     Margin="0,0,10,0"
+                     VerticalContentAlignment="Center"
+                     FontSize="16"
+                     Padding="10"
+                     KeyDown="UserTaskSearchTextBox_KeyDown"/>
+
+                        <Button Content="Поиск"
+                    Width="120"
+                    Height="40"
+                    Style="{StaticResource SearchButtonStyle}"
+                    Click="UserTaskSearchButton_Click"/>
+
+                        <Button Content="Сбросить"
+                    Width="120"
+                    Height="40"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Click="UserTaskResetButton_Click"/>
+                    </StackPanel>
+
+                    <!-- DataGrid -->
+                    <DataGrid x:Name="UserTasksDataGrid"
+                  Grid.Row="1"
+                  AutoGenerateColumns="False"
+                  ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
+                  RowStyle="{StaticResource DataGridRowStyle}"
+                  AlternatingRowBackground="#F3F3F3"
+                  Margin="10">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" 
+                                  Binding="{Binding UserTaskID}" 
+                                  Width="Auto"
+                                  ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                            <DataGridTextColumn Header="Пользователь" 
+                                  Binding="{Binding FullName}" 
+                                  Width="*"
+                                  ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                            <DataGridTextColumn Header="Описание задачи" 
+                                  Binding="{Binding Description}" 
+                                  Width="*"
+                                  ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                            <DataGridTextColumn Header="Проект" 
+                                  Binding="{Binding ProjectName}" 
+                                  Width="*"
+                                  ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Учетные записи">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Панель поиска -->
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,0,10">
+                        <TextBox x:Name="AccountSearchTextBox" Width="300" Height="40"
+                     materialDesign:HintAssist.Hint="Поиск учетных записей..."
+                     Margin="0,0,10,0"
+                     VerticalContentAlignment="Center"
+                     FontSize="16"
+                     Padding="10"
+                     KeyDown="AccountSearchTextBox_KeyDown"/>
+                        <Button Content="Поиск"
+                    Width="120"
+                    Height="40"
+                    Style="{StaticResource SearchButtonStyle}"
+                    Click="AccountSearchButton_Click"/>
+                        <Button Content="Сбросить"
+                    Width="120"
+                    Height="40"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Click="AccountResetButton_Click"/>
+                    </StackPanel>
+
+                    <!-- DataGrid -->
+                    <DataGrid x:Name="AccountsDataGrid" 
+                  Grid.Row="1"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  HeadersVisibility="Column"
+                  ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
+                  RowStyle="{StaticResource DataGridRowStyle}"
+                  SelectionMode="Single"
+                  AlternatingRowBackground="#F3F3F3"
+                  Margin="10">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*"
+                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                            <DataGridTextColumn Header="Фамилия" Binding="{Binding Surname}" Width="*"
+                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                            <DataGridTextColumn Header="Логин" Binding="{Binding Login}" Width="*"
+                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+
+                            <DataGridTemplateColumn Header="Пароль" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DisplayPassword}" 
+                                           VerticalAlignment="Center"
+                                           Margin="5,0"
+                                           Width="120"/>
+                                            <Button Content="👁️" 
+                                        Style="{StaticResource BaseButtonStyle}"
+                                        Click="TogglePasswordVisibility_Click"
+                                        CommandParameter="{Binding}"
+                                        Padding="5"
+                                        Width="30"
+                                        Margin="5,0"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Заявки" Height="20" VerticalAlignment="Top">
+            </TabItem>
+            <TabItem Header="Профиль" Height="20" VerticalAlignment="Top">
             </TabItem>
             <!-- Дополнительные вкладки можно добавить здесь -->
         </TabControl>
