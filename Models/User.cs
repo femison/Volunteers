@@ -12,10 +12,13 @@ namespace Volunteers.Models
         public string Email { get; set; }
         public string Phone { get; set; }
         public DateTime DateOfBirth { get; set; }
-        public string Gender { get; set; } // 'м' или 'ж'
+        public string Gender { get; set; }
         public string Address { get; set; }
-        public string Role { get; set; } // 'Волонтер' или 'Администратор'
+        public string Role { get; set; }
 
+        // Свойство для отображения ФИО, только для чтения
         public string FullName => $"{Name} {Surname}";
     }
+
+
 }

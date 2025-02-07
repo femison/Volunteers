@@ -5,6 +5,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Панель Администратора" Height="900" Width="1600"
         WindowStartupLocation="CenterScreen"
+        Activated="Window_Activated"
         Closed="Window_Closed">
 
     <Window.Resources>
@@ -13,7 +14,7 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="ToolTip" Value="{Binding Path=Text, RelativeSource={RelativeSource Self}}"/>
-            
+
         </Style>
 
         <!-- Базовый стиль для кнопок с использованием ControlTemplate -->
@@ -354,7 +355,8 @@
             <TabItem Header="Задачи">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="380*"/>
+                        <ColumnDefinition Width="263*"/>
+                        <ColumnDefinition Width="117*"/>
                         <ColumnDefinition Width="13*"/>
                         <ColumnDefinition Width="18*"/>
                         <ColumnDefinition Width="1143*"/>
@@ -366,7 +368,7 @@
                     </Grid.RowDefinitions>
 
                     <!-- Панель поиска задач -->
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,0,10" Grid.Column="3">
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,0,10" Grid.Column="4">
                         <TextBox x:Name="TaskSearchTextBox" Width="300" Height="40" 
                                  materialDesign:HintAssist.Hint="Поиск задач..." 
                                  Margin="0,0,10,0" 
@@ -396,7 +398,7 @@
                               RowStyle="{StaticResource DataGridRowStyle}"
                               SelectionMode="Single"
                               AlternatingRowBackground="#F3F3F3"
-                              Margin="0,0,0,10" Grid.ColumnSpan="4">
+                              Margin="0,0,0,60" Grid.ColumnSpan="5">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding TaskID}" Width="Auto"
                                                 ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
@@ -417,7 +419,7 @@
                     </DataGrid>
 
                     <!-- Кнопка "Добавить задачу" -->
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left" Grid.Column="3" Margin="919,653,0,0">
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left" Grid.Column="4" Margin="919,653,0,0">
                         <Button Content="Добавить задачу"
                                 Click="AddTaskButton_Click"
                                 Width="220"
@@ -426,67 +428,31 @@
                     </StackPanel>
                 </Grid>
             </TabItem>
+            <!-- Вкладка "Назначение задач" -->
             <TabItem Header="Назначение задач">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <StackPanel>
+                   
 
-                    <!-- Панель поиска -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
-                        <TextBox x:Name="UserTaskSearchTextBox" 
-                     Width="300" 
-                     Height="40"
-                     materialDesign:HintAssist.Hint="Поиск по назначениям..."
-                     Margin="0,0,10,0"
-                     VerticalContentAlignment="Center"
-                     FontSize="16"
-                     Padding="10"
-                     KeyDown="UserTaskSearchTextBox_KeyDown"/>
-
-                        <Button Content="Поиск"
-                    Width="120"
-                    Height="40"
-                    Style="{StaticResource SearchButtonStyle}"
-                    Click="UserTaskSearchButton_Click"/>
-
-                        <Button Content="Сбросить"
-                    Width="120"
-                    Height="40"
-                    Style="{StaticResource SecondaryButtonStyle}"
-                    Click="UserTaskResetButton_Click"/>
-                    </StackPanel>
-
-                    <!-- DataGrid -->
-                    <DataGrid x:Name="UserTasksDataGrid"
-                  Grid.Row="1"
-                  AutoGenerateColumns="False"
-                  ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
-                  RowStyle="{StaticResource DataGridRowStyle}"
-                  AlternatingRowBackground="#F3F3F3"
-                  Margin="10">
+                    <!-- DataGrid для отображения задач -->
+                    <DataGrid x:Name="UserTasksDataGrid" AutoGenerateColumns="False" Margin="0,10" Height="612" ItemsSource="{Binding UserTasks}">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="ID" 
-                                  Binding="{Binding UserTaskID}" 
-                                  Width="Auto"
-                                  ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
-                            <DataGridTextColumn Header="Пользователь" 
-                                  Binding="{Binding FullName}" 
-                                  Width="*"
-                                  ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
-                            <DataGridTextColumn Header="Описание задачи" 
-                                  Binding="{Binding Description}" 
-                                  Width="*"
-                                  ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
-                            <DataGridTextColumn Header="Проект" 
-                                  Binding="{Binding ProjectName}" 
-                                  Width="*"
-                                  ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                            <DataGridTextColumn Header="Имя пользователя" Binding="{Binding FullName}" Width="*"/>
+                            <DataGridTextColumn Header="Описание задачи" Binding="{Binding Description}" Width="*"/>
+                            <DataGridTextColumn Header="Проект" Binding="{Binding ProjectName}" Width="*"/>
+                            <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
-                </Grid>
+
+                    <!-- Кнопка "Добавить участие" -->
+                    <Button Content="Добавить участие" Width="150" Height="40" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,10" Click="AddParticipationButton_Click"/>
+                </StackPanel>
             </TabItem>
+
+
+
+
+
+
 
             <TabItem Header="Учетные записи">
                 <Grid>
@@ -527,6 +493,7 @@
                   SelectionMode="Single"
                   AlternatingRowBackground="#F3F3F3"
                   Margin="10">
+
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*"
                                     ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
@@ -556,13 +523,13 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+                    
                 </Grid>
             </TabItem>
 
             <TabItem Header="Заявки" Height="20" VerticalAlignment="Top">
             </TabItem>
-            <TabItem Header="Профиль" Height="20" VerticalAlignment="Top">
-            </TabItem>
+           
             <!-- Дополнительные вкладки можно добавить здесь -->
         </TabControl>
     </Grid>

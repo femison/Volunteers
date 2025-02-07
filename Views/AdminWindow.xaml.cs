@@ -1,12 +1,13 @@
 ﻿// Views/AdminWindow.xaml.cs
-using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input; // Для обработки клавиш
+using System.Windows.Media;
 using MySql.Data.MySqlClient;
 using Volunteers.Data;
 using Volunteers.Models;
+
 
 namespace Volunteers.Views
 {
@@ -26,7 +27,17 @@ namespace Volunteers.Views
             LoadTasksData();
             LoadAccounts();
             LoadUserTasks(); // Добавьте вызов загрузки назначений
-}
+        }
+
+        private void Window_Activated(object sender, EventArgs e)
+        {
+            // Перезагружаем данные в таблицах
+            LoadUsersData();
+            LoadProjectsData();
+            LoadTasksData();
+            LoadAccounts();
+            LoadUserTasks();
+        }
 
 
         #region Управление Пользователями
@@ -817,88 +828,87 @@ namespace Volunteers.Views
                 AccountSearchButton_Click(sender, e);
             }
         }
+
+        public class UserTask
+        {
+            public string FullName { get; set; }
+            public string Description { get; set; }
+            public string ProjectName { get; set; }
+            public string Status { get; set; }
+        }
         private List<UserTaskAssignment> _allUserTasks = new List<UserTaskAssignment>();
         // Загрузка данных
-        private void LoadUserTasks()
+        public void LoadUserTasks()
         {
-            try
+            ObservableCollection<UserTask> userTasks = new ObservableCollection<UserTask>();
+
+            using (MySqlConnection connection = Database.GetConnection())
             {
-                using (MySqlConnection connection = Database.GetConnection())
+                try
                 {
                     connection.Open();
                     string query = @"SELECT 
-                                ut.UserTaskID, 
                                 CONCAT(u.Name, ' ', u.Surname) AS FullName, 
                                 t.Description, 
-                                p.ProjectName 
-                            FROM user_tasks ut
-                            JOIN users u ON ut.UserID = u.UserID
-                            JOIN tasks t ON ut.TaskID = t.TaskID
-                            JOIN projects p ON ut.ProjectID = p.ProjectID";
+                                p.ProjectName, 
+                                t.Status
+                              FROM user_tasks ut
+                              JOIN users u ON ut.UserID = u.UserID
+                              JOIN tasks t ON ut.TaskID = t.TaskID
+                              JOIN projects p ON ut.ProjectID = p.ProjectID";
 
                     MySqlCommand cmd = new MySqlCommand(query, connection);
-                    MySqlDataReader reader = cmd.ExecuteReader();
 
-                    _allUserTasks.Clear();
-                    while (reader.Read())
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
-                        _allUserTasks.Add(new UserTaskAssignment
+                        while (reader.Read())
                         {
-                            UserTaskID = reader.GetInt32("UserTaskID"),
-                            FullName = reader.GetString("FullName"),
-                            Description = reader.GetString("Description"),
-                            ProjectName = reader.GetString("ProjectName")
-                        });
+                            UserTask task = new UserTask
+                            {
+                                FullName = reader.GetString("FullName"),
+                                Description = reader.GetString("Description"),
+                                ProjectName = reader.GetString("ProjectName"),
+                                Status = reader.GetString("Status")
+                            };
+                            userTasks.Add(task);
+                        }
                     }
 
-                    UserTasksDataGrid.ItemsSource = _allUserTasks;
+                    UserTasksDataGrid.ItemsSource = userTasks; // Обновляем источник данных
+
+                }
+                catch (MySqlException ex)
+                {
+                    MessageBox.Show("Ошибка при загрузке данных задач: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка загрузки назначений: {ex.Message}", "Ошибка",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
 
-        private void UserTaskSearchButton_Click(object sender, RoutedEventArgs e)
-        {
-            ApplyUserTaskFilter();
-        }
+        public ObservableCollection<UserTask> UserTasks { get; set; } = new ObservableCollection<UserTask>();
 
-        private void UserTaskResetButton_Click(object sender, RoutedEventArgs e)
-        {
-            UserTaskSearchTextBox.Clear();
-            UserTasksDataGrid.ItemsSource = _allUserTasks;
-        }
+
+
+        //private void UserTaskResetButton_Click(object sender, RoutedEventArgs e)
+        //{
+        //    UserTasksDataGrid.ItemsSource = _allUserTasks;
+        //    UserTaskSearchTextBox.Clear();
+        //}
 
         private void UserTaskSearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Enter)
+            if (e.Key == Key.Enter)  // Когда нажата клавиша Enter
             {
-                ApplyUserTaskFilter();
+                
             }
         }
 
-        private void ApplyUserTaskFilter()
+
+        private void AddParticipationButton_Click()
         {
-            string searchText = UserTaskSearchTextBox.Text.Trim().ToLower();
 
-            if (string.IsNullOrEmpty(searchText))
-            {
-                UserTasksDataGrid.ItemsSource = _allUserTasks;
-                return;
-            }
-
-            var filtered = _allUserTasks
-                .Where(task =>
-                    (task.FullName?.ToLower().Contains(searchText) ?? false) ||
-                    (task.Description?.ToLower().Contains(searchText) ?? false) ||
-                    (task.ProjectName?.ToLower().Contains(searchText) ?? false))
-                .ToList();
-
-            UserTasksDataGrid.ItemsSource = filtered;
         }
+
+       
 
 
         private void AddUserTaskButton_Click(object sender, RoutedEventArgs e)
@@ -910,7 +920,29 @@ namespace Volunteers.Views
             LoadUserTasks();
         }
 
-    }
-    
+        private void AddParticipationButton_Click(object sender, RoutedEventArgs e)
+        {
+            AddParticipationWindow addParticipationWindow = new AddParticipationWindow();
+            addParticipationWindow.ShowDialog();
+
+        }
+
+        
+        
+
+        public ObservableCollection<TaskModel> FilteredTasks { get; set; } = new ObservableCollection<TaskModel>();
+
+        private List<Task> allTasks;
+        
+
+
+        
+
 
     }
+
+
+
+
+
+}
