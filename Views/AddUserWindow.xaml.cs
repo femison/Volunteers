@@ -35,7 +35,7 @@ namespace Volunteers.Views
             }
 
             // Хэширование пароля
-            string hashedPassword = ComputeSha256Hash(PasswordBox.Password.Trim());
+            
 
             // Создание объекта пользователя
             User newUser = new User
@@ -55,7 +55,7 @@ namespace Volunteers.Views
             UserCredential credentials = new UserCredential
             {
                 Login = LoginTextBox.Text.Trim(),
-                Password = hashedPassword
+                Password = PasswordBox.Password.Trim()
             };
 
             // Добавление пользователя в базу данных
@@ -119,20 +119,7 @@ namespace Volunteers.Views
             }
         }
 
-        private string ComputeSha256Hash(string rawData)
-        {
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                foreach (var b in bytes)
-                {
-                    builder.Append(b.ToString("x2"));
-                }
-                return builder.ToString();
-            }
-        }
-
+     
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             this.DialogResult = false;

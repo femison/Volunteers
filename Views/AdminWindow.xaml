@@ -484,46 +484,57 @@
 
                     <!-- DataGrid -->
                     <DataGrid x:Name="AccountsDataGrid" 
-                  Grid.Row="1"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  HeadersVisibility="Column"
-                  ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
-                  RowStyle="{StaticResource DataGridRowStyle}"
-                  SelectionMode="Single"
-                  AlternatingRowBackground="#F3F3F3"
-                  Margin="10">
-
+          Grid.Row="1"
+          AutoGenerateColumns="False"
+          IsReadOnly="True"
+          HeadersVisibility="Column"
+          ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
+          RowStyle="{StaticResource DataGridRowStyle}"
+          SelectionMode="Single"
+          AlternatingRowBackground="#F3F3F3"
+          Margin="10">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*"
-                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                            ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <DataGridTextColumn Header="Фамилия" Binding="{Binding Surname}" Width="*"
-                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
+                            ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <DataGridTextColumn Header="Логин" Binding="{Binding Login}" Width="*"
-                                    ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
-
+                            ElementStyle="{StaticResource DataGridTextBlockStyle}"/>
                             <DataGridTemplateColumn Header="Пароль" Width="*">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding DisplayPassword}" 
-                                           VerticalAlignment="Center"
-                                           Margin="5,0"
-                                           Width="120"/>
+                                   VerticalAlignment="Center"
+                                   Margin="5,0"
+                                   Width="120"/>
                                             <Button Content="👁️" 
-                                        Style="{StaticResource BaseButtonStyle}"
-                                        Click="TogglePasswordVisibility_Click"
-                                        CommandParameter="{Binding}"
-                                        Padding="5"
-                                        Width="30"
-                                        Margin="5,0"/>
+                                Style="{StaticResource BaseButtonStyle}"
+                                Click="TogglePasswordVisibility_Click"
+                                CommandParameter="{Binding}"
+                                Padding="5"
+                                Width="30"
+                                Margin="5,0"/>
                                         </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <!-- Кнопка Редактирования -->
+                            <DataGridTemplateColumn Header="Действия" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Редактировать"
+                            Click="EditAccountButton_Click"
+                            Tag="{Binding UserID}"
+                            Style="{StaticResource BaseButtonStyle}"
+                            Width="100"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
-                    
+
+
                 </Grid>
             </TabItem>
 

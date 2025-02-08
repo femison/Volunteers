@@ -8,7 +8,7 @@
 
     <Grid Margin="10">
         <Border BorderBrush="#A8D5BA" BorderThickness="2" CornerRadius="10" Padding="20" Background="White">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,0,-1">
                 <StackPanel Orientation="Vertical" Margin="10">
 
                     <!-- Поля для ввода данных пользователя -->

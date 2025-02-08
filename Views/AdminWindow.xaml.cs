@@ -933,10 +933,69 @@ namespace Volunteers.Views
         public ObservableCollection<TaskModel> FilteredTasks { get; set; } = new ObservableCollection<TaskModel>();
 
         private List<Task> allTasks;
-        
 
 
-        
+
+        private void EditAccountButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Получаем ID пользователя из кнопки (передается через Tag)
+            int userId = Convert.ToInt32((sender as Button).Tag);
+
+            // Открываем окно редактирования учетной записи с выбранным пользователем
+            EditAccountWindow editWindow = new EditAccountWindow(userId);
+            editWindow.Owner = this;
+
+            // Если пользователь нажал "Сохранить" в окне редактирования, обновляем DataGrid
+            if (editWindow.ShowDialog() == true)
+            {
+                LoadUsersData();  // Перезагружаем данные в DataGrid
+            }
+        }
+
+
+
+        private void LoadUserCredentialsData()
+        {
+            // Ваш код для загрузки и отображения данных учетных записей пользователей
+            // Например:
+            using (MySqlConnection connection = Database.GetConnection())
+            {
+                try
+                {
+                    connection.Open();
+                    string query = @"SELECT u.UserID, u.Name, u.Surname, uc.Login
+                             FROM users u
+                             INNER JOIN usercredentials uc ON u.UserID = uc.UserID";
+
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    MySqlDataReader reader = cmd.ExecuteReader();
+
+                    List<UserCredential> userCredentialsList = new List<UserCredential>();
+
+                    while (reader.Read())
+                    {
+                        UserCredential userCredential = new UserCredential
+                        {
+                            UserID = reader.GetInt32("UserID"),
+                            Login = reader.GetString("Login"),
+                           
+                        };
+                        userCredentialsList.Add(userCredential);
+                    }
+
+                    // Привязка данных к DataGrid
+                    AccountsDataGrid.ItemsSource = userCredentialsList;
+                }
+                catch (MySqlException ex)
+                {
+                    MessageBox.Show("Ошибка при загрузке данных: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+    
+
+
 
 
     }
