@@ -1,12 +1,10 @@
-﻿// AddUserWindow.xaml.cs
-using System;
-using System.Security.Cryptography;
-using System.Text;
+﻿using System;
 using System.Windows;
-using System.Windows.Controls;
 using MySql.Data.MySqlClient;
 using Volunteers.Data;
 using Volunteers.Models;
+using BCrypt.Net;
+using System.Windows.Controls;  // Подключаем BCrypt
 
 namespace Volunteers.Views
 {
@@ -34,8 +32,8 @@ namespace Volunteers.Views
                 return;
             }
 
-            // Хэширование пароля
-            
+            // Хэширование пароля с использованием BCrypt
+            string passwordHash = BCrypt.Net.BCrypt.HashPassword(PasswordBox.Password.Trim());
 
             // Создание объекта пользователя
             User newUser = new User
@@ -55,7 +53,7 @@ namespace Volunteers.Views
             UserCredential credentials = new UserCredential
             {
                 Login = LoginTextBox.Text.Trim(),
-                Password = PasswordBox.Password.Trim()
+                Password = passwordHash  // Сохраняем хэш пароля
             };
 
             // Добавление пользователя в базу данных
@@ -97,13 +95,13 @@ namespace Volunteers.Views
                     cmdUser.ExecuteNonQuery();
                     int insertedUserId = (int)cmdUser.LastInsertedId;
 
-                    // Вставка учетных данных
+                    // Вставка учетных данных (логин и пароль)
                     string insertCredentialQuery = @"INSERT INTO usercredentials (UserID, Login, Password)
                                                     VALUES (@UserID, @Login, @Password)";
                     MySqlCommand cmdCredential = new MySqlCommand(insertCredentialQuery, connection, transaction);
                     cmdCredential.Parameters.AddWithValue("@UserID", insertedUserId);
                     cmdCredential.Parameters.AddWithValue("@Login", credentials.Login);
-                    cmdCredential.Parameters.AddWithValue("@Password", credentials.Password);
+                    cmdCredential.Parameters.AddWithValue("@Password", credentials.Password);  // Сохраняем хэш пароля
 
                     cmdCredential.ExecuteNonQuery();
 
@@ -119,7 +117,6 @@ namespace Volunteers.Views
             }
         }
 
-     
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             this.DialogResult = false;

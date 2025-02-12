@@ -2,6 +2,7 @@
 using System.Windows;
 using MySql.Data.MySqlClient;
 using Volunteers.Data;
+using BCrypt.Net;  // Подключаем BCrypt
 
 namespace Volunteers.Views
 {
@@ -50,7 +51,7 @@ namespace Volunteers.Views
             string newPassword = PasswordBox.Password.Trim();
 
             // Если новый пароль не был введен, используем текущий пароль
-            string passwordToSave = string.IsNullOrWhiteSpace(newPassword) ? currentPassword : newPassword;
+            string passwordToSave = string.IsNullOrWhiteSpace(newPassword) ? currentPassword : BCrypt.Net.BCrypt.HashPassword(newPassword);  // Хэшируем новый пароль
 
             // Обновление учетной записи в базе данных
             if (UpdateUserCredentialsInDatabase(newLogin, passwordToSave))

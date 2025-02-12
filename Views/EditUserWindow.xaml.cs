@@ -1,12 +1,10 @@
-﻿// EditUserWindow.xaml.cs
-using System;
-using System.Security.Cryptography;
-using System.Text;
+﻿using System;
 using System.Windows;
-using System.Windows.Controls;
 using MySql.Data.MySqlClient;
 using Volunteers.Data;
 using Volunteers.Models;
+using BCrypt.Net;
+using System.Windows.Controls;  // Подключаем BCrypt
 
 namespace Volunteers.Views
 {
@@ -103,7 +101,7 @@ namespace Volunteers.Views
             string newPasswordHash = "";
             if (!string.IsNullOrWhiteSpace(NewPasswordBox.Password))
             {
-                newPasswordHash = ComputeSha256Hash(NewPasswordBox.Password.Trim());
+                newPasswordHash = BCrypt.Net.BCrypt.HashPassword(NewPasswordBox.Password.Trim());  // Хэшируем новый пароль с помощью BCrypt
             }
             else
             {
@@ -157,7 +155,7 @@ namespace Volunteers.Views
                                              WHERE UserID=@UserID";
                     MySqlCommand cmdCredential = new MySqlCommand(updateCredentialQuery, connection, transaction);
                     cmdCredential.Parameters.AddWithValue("@Login", LoginTextBox.Text.Trim());
-                    cmdCredential.Parameters.AddWithValue("@Password", passwordHash);
+                    cmdCredential.Parameters.AddWithValue("@Password", passwordHash);  // Сохраняем хэш пароля
                     cmdCredential.Parameters.AddWithValue("@UserID", user.UserID);
 
                     cmdCredential.ExecuteNonQuery();
@@ -172,21 +170,6 @@ namespace Volunteers.Views
                 }
             }
         }
-
-        private string ComputeSha256Hash(string rawData)
-        {
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                foreach (var b in bytes)
-                {
-                    builder.Append(b.ToString("x2"));
-                }
-                return builder.ToString();
-            }
-        }
-
 
         private string GetUserPassword(int userId)
         {

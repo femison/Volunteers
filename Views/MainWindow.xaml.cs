@@ -1,16 +1,15 @@
-﻿// MainWindow.xaml.cs
-using System;
+﻿using System;
 using System.Windows;
 using MySql.Data.MySqlClient;
 using Volunteers.Data;
 using Volunteers.Models;
+using BCrypt.Net;
 using Volunteers.Views;
 
 namespace Volunteers
 {
     public partial class MainWindow : Window
     {
-
         public MainWindow()
         {
             InitializeComponent();
@@ -76,32 +75,37 @@ namespace Volunteers
                 {
                     connection.Open();
                     string query = @"SELECT u.UserID, u.Name, u.Surname, u.UserSkills, u.Email, u.Phone, 
-                                        u.DateOfBirth, u.Gender, u.Address, u.Role
+                                        u.DateOfBirth, u.Gender, u.Address, u.Role, uc.Password
                                  FROM usercredentials uc
                                  JOIN users u ON uc.UserID = u.UserID
-                                 WHERE uc.Login = @Login AND uc.Password = @Password";
+                                 WHERE uc.Login = @Login";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
                     cmd.Parameters.AddWithValue("@Login", login);
-                    cmd.Parameters.AddWithValue("@Password", password); // Пароль передается напрямую
 
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            user = new User
+                            string storedPasswordHash = reader.GetString("Password");
+
+                            // Проверка пароля с хэшированным значением
+                            if (BCrypt.Net.BCrypt.Verify(password, storedPasswordHash))
                             {
-                                UserID = reader.GetInt32("UserID"),
-                                Name = reader.GetString("Name"),
-                                Surname = reader.GetString("Surname"),
-                                UserSkills = reader.IsDBNull(reader.GetOrdinal("UserSkills")) ? "" : reader.GetString("UserSkills"),
-                                Email = reader.GetString("Email"),
-                                Phone = reader.GetString("Phone"),
-                                DateOfBirth = reader.GetDateTime("DateOfBirth"),
-                                Gender = reader.GetString("Gender"),
-                                Address = reader.IsDBNull(reader.GetOrdinal("Address")) ? "" : reader.GetString("Address"),
-                                Role = reader.GetString("Role")
-                            };
-                            return true;
+                                user = new User
+                                {
+                                    UserID = reader.GetInt32("UserID"),
+                                    Name = reader.GetString("Name"),
+                                    Surname = reader.GetString("Surname"),
+                                    UserSkills = reader.IsDBNull(reader.GetOrdinal("UserSkills")) ? "" : reader.GetString("UserSkills"),
+                                    Email = reader.GetString("Email"),
+                                    Phone = reader.GetString("Phone"),
+                                    DateOfBirth = reader.GetDateTime("DateOfBirth"),
+                                    Gender = reader.GetString("Gender"),
+                                    Address = reader.IsDBNull(reader.GetOrdinal("Address")) ? "" : reader.GetString("Address"),
+                                    Role = reader.GetString("Role")
+                                };
+                                return true;
+                            }
                         }
                     }
 
@@ -114,58 +118,10 @@ namespace Volunteers
                 }
             }
         }
-
-        // Обработчик закрытия окна
-        private void Window_Closed(object sender, EventArgs e)
-        {
-            Logout();
-        }
-
-        // Метод выхода из системы
-        private void Logout()
-        {
-            if (this.Owner != null)
-            {
-                MainWindow mainWindow = this.Owner as MainWindow;
-                if (mainWindow != null)
-                {
-                    mainWindow.ClearLoginFields(); // Очищаем поля логина и пароля
-                    mainWindow.Show();              // Показываем MainWindow
-                }
-            }
-            this.Close(); // Закрываем текущее окно (AdminWindow или VoliWindow)
-        }
-
-        // Метод для очистки полей ввода
         public void ClearLoginFields()
         {
             LoginTextBox.Clear();
             PasswordBox.Clear();
-        }
-
-        private void ShowPasswordCheckBox_Checked(object sender, RoutedEventArgs e)
-        {
-            // Переносим пароль из PasswordBox в TextBox
-            ShowPasswordTextBox.Text = PasswordBox.Password;
-            // Показываем TextBox и скрываем PasswordBox
-            ShowPasswordTextBox.Visibility = Visibility.Visible;
-            PasswordBox.Visibility = Visibility.Collapsed;
-
-            // Устанавливаем фокус на TextBox
-            ShowPasswordTextBox.Focus();
-            ShowPasswordTextBox.CaretIndex = ShowPasswordTextBox.Text.Length;
-        }
-
-        private void ShowPasswordCheckBox_Unchecked(object sender, RoutedEventArgs e)
-        {
-            // Переносим пароль из TextBox обратно в PasswordBox
-            PasswordBox.Password = ShowPasswordTextBox.Text;
-            // Показываем PasswordBox и скрываем TextBox
-            PasswordBox.Visibility = Visibility.Visible;
-            ShowPasswordTextBox.Visibility = Visibility.Collapsed;
-
-            // Устанавливаем фокус на PasswordBox
-            PasswordBox.Focus();
         }
     }
 }
