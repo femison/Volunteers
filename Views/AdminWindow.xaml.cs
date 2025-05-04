@@ -963,9 +963,10 @@ namespace Volunteers.Views
                 try
                 {
                     connection.Open();
-                    string query = @"SELECT u.UserID, u.Name, u.Surname, uc.Login
+                    string query = @"SELECT u.UserID, u.Name, u.Surname, uc.Login, uc.Password
                              FROM users u
-                             INNER JOIN usercredentials uc ON u.UserID = uc.UserID";
+                             LEFT JOIN usercredentials uc ON u.UserID = uc.UserID
+                             ORDER BY u.UserID";
 
                     MySqlCommand cmd = new MySqlCommand(query, connection);
                     MySqlDataReader reader = cmd.ExecuteReader();
@@ -977,8 +978,8 @@ namespace Volunteers.Views
                         UserCredential userCredential = new UserCredential
                         {
                             UserID = reader.GetInt32("UserID"),
-                            Login = reader.GetString("Login"),
-                           
+                            Login = reader.IsDBNull(reader.GetOrdinal("Login")) || string.IsNullOrEmpty(reader.GetString("Login")) ? "Без логина" : reader.GetString("Login"),
+                            Password = reader.IsDBNull(reader.GetOrdinal("Password")) || string.IsNullOrEmpty(reader.GetString("Password")) ? "Без пароля" : reader.GetString("Password")
                         };
                         userCredentialsList.Add(userCredential);
                     }
@@ -993,11 +994,40 @@ namespace Volunteers.Views
             }
         }
 
-    
+        public class UserCredential
+        {
+            public int UserID { get; set; }
+            public string Name { get; set; }
+            public string Surname { get; set; }
+            public string Login { get; set; }
+            public string Password { get; set; }
 
+            public string DisplayPassword
+            {
+                get
+                {
+                    return string.IsNullOrEmpty(Password) ? "Без пароля" : Password;
+                }
+            }
 
+            public string DisplayLogin
+            {
+                get
+                {
+                    return string.IsNullOrEmpty(Login) ? "Без логина" : Login;
+                }
+            }
+        }
 
+        private void UserTaskSearchButton_Click(object sender, RoutedEventArgs e)
+        {
 
+        }
+
+        private void UserTaskResetButton_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 
 

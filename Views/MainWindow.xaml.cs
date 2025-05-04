@@ -5,6 +5,7 @@ using Volunteers.Data;
 using Volunteers.Models;
 using BCrypt.Net;
 using Volunteers.Views;
+using System.Windows.Controls;
 
 namespace Volunteers
 {
@@ -13,6 +14,33 @@ namespace Volunteers
         public MainWindow()
         {
             InitializeComponent();
+        }
+        private bool isPasswordVisible = false;
+
+        private void TogglePasswordVisibility(object sender, RoutedEventArgs e)
+        {
+            isPasswordVisible = !isPasswordVisible;
+
+            if (isPasswordVisible)
+            {
+                VisiblePasswordBox.Text = PasswordBox.Password;
+                VisiblePasswordBox.Visibility = Visibility.Visible;
+                PasswordBox.Visibility = Visibility.Collapsed;
+                TogglePasswordButton.Content = "Скрыть пароль";
+            }
+            else
+            {
+                PasswordBox.Password = VisiblePasswordBox.Text;
+                PasswordBox.Visibility = Visibility.Visible;
+                VisiblePasswordBox.Visibility = Visibility.Collapsed;
+                TogglePasswordButton.Content = "Показать пароль";
+            }
+        }
+
+        // Обработчик для кнопки закрытия
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
         }
 
         // Обработчик нажатия кнопки "Войти"
@@ -25,15 +53,15 @@ namespace Volunteers
             if (string.IsNullOrEmpty(login))
             {
                 MessageBox.Show("Пожалуйста, введите логин.", "Пустое поле", MessageBoxButton.OK, MessageBoxImage.Warning);
-                LoginTextBox.Focus(); // Устанавливаем фокус на поле логина
-                return; // Прерываем дальнейшее выполнение метода
+                LoginTextBox.Focus();
+                return;
             }
 
             if (string.IsNullOrEmpty(password))
             {
                 MessageBox.Show("Пожалуйста, введите пароль.", "Пустое поле", MessageBoxButton.OK, MessageBoxImage.Warning);
-                PasswordBox.Focus(); // Устанавливаем фокус на поле пароля
-                return; // Прерываем дальнейшее выполнение метода
+                PasswordBox.Focus();
+                return;
             }
 
             if (AuthenticateUser(login, password, out User authenticatedUser))
@@ -41,17 +69,16 @@ namespace Volunteers
                 if (authenticatedUser.Role.Equals("Администратор", StringComparison.OrdinalIgnoreCase))
                 {
                     AdminWindow adminWindow = new AdminWindow(authenticatedUser);
-                    adminWindow.Owner = this; // Устанавливаем владельца окна
+                    adminWindow.Owner = this;
                     adminWindow.Show();
-                    this.Hide(); // Скрываем MainWindow
+                    this.Hide();
                 }
                 else if (authenticatedUser.Role.Equals("Волонтер", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Открываем окно VoliWindow для роли "Волонтёр"
                     VoliWindow voliWindow = new VoliWindow(authenticatedUser);
-                    voliWindow.Owner = this; // Устанавливаем владельца окна
+                    voliWindow.Owner = this;
                     voliWindow.Show();
-                    this.Hide(); // Скрываем MainWindow
+                    this.Hide();
                 }
                 else
                 {
@@ -88,7 +115,6 @@ namespace Volunteers
                         {
                             string storedPasswordHash = reader.GetString("Password");
 
-                            // Проверка пароля с хэшированным значением
                             if (BCrypt.Net.BCrypt.Verify(password, storedPasswordHash))
                             {
                                 user = new User
@@ -118,10 +144,14 @@ namespace Volunteers
                 }
             }
         }
+
+
+
         public void ClearLoginFields()
         {
             LoginTextBox.Clear();
             PasswordBox.Clear();
+            VisiblePasswordBox.Clear();
         }
     }
 }
