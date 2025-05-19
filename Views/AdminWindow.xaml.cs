@@ -1,13 +1,13 @@
-﻿// Views/AdminWindow.xaml.cs
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input; // Для обработки клавиш
-using System.Windows.Media;
+using System.Windows.Input;
 using MySql.Data.MySqlClient;
 using Volunteers.Data;
 using Volunteers.Models;
-
 
 namespace Volunteers.Views
 {
@@ -16,39 +16,49 @@ namespace Volunteers.Views
         private User currentUser;
         private List<User> usersList;
         private List<Project> projectsList;
-        private List<TaskModel> tasksList; // Список задач
+        private List<TaskModel> tasksList;
+        private List<RequestModel> requestsList;
 
         public AdminWindow(User user)
-{
+        {
             InitializeComponent();
             currentUser = user;
             LoadUsersData();
             LoadProjectsData();
             LoadTasksData();
             LoadAccounts();
-            LoadUserTasks(); // Добавьте вызов загрузки назначений
+            LoadUserTasks();
+            LoadRequestsData();
         }
 
         private void Window_Activated(object sender, EventArgs e)
         {
-            // Перезагружаем данные в таблицах
             LoadUsersData();
             LoadProjectsData();
             LoadTasksData();
             LoadAccounts();
             LoadUserTasks();
+            LoadRequestsData();
         }
 
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            if (this.Owner != null)
+            {
+                MainWindow mainWindow = this.Owner as MainWindow;
+                if (mainWindow != null)
+                {
+                    mainWindow.ClearLoginFields();
+                    mainWindow.Show();
+                }
+            }
+        }
 
         #region Управление Пользователями
 
-        /// <summary>
-        /// Загружает данные пользователей из базы данных и отображает их в DataGrid.
-        /// </summary>
         private void LoadUsersData()
         {
             usersList = new List<User>();
-
             using (MySqlConnection connection = Database.GetConnection())
             {
                 try
@@ -63,7 +73,7 @@ namespace Volunteers.Views
                     {
                         while (reader.Read())
                         {
-                            User user = new User
+                            usersList.Add(new User
                             {
                                 UserID = reader.GetInt32("UserID"),
                                 Name = reader.GetString("Name"),
@@ -75,11 +85,9 @@ namespace Volunteers.Views
                                 Gender = reader.GetString("Gender"),
                                 Address = reader.IsDBNull(reader.GetOrdinal("Address")) ? "" : reader.GetString("Address"),
                                 Role = reader.GetString("Role")
-                            };
-                            usersList.Add(user);
+                            });
                         }
                     }
-
                     UsersDataGrid.ItemsSource = usersList;
                 }
                 catch (MySqlException ex)
@@ -89,34 +97,24 @@ namespace Volunteers.Views
             }
         }
 
-
-        /// <summary>
-        /// Открывает окно для добавления нового пользователя.
-        /// </summary>
         private void AddUserButton_Click(object sender, RoutedEventArgs e)
         {
             AddUserWindow addUserWindow = new AddUserWindow();
             addUserWindow.Owner = this;
-
             if (addUserWindow.ShowDialog() == true)
             {
                 LoadUsersData();
             }
         }
 
-        /// <summary>
-        /// Открывает окно для редактирования выбранного пользователя.
-        /// </summary>
         private void EditUserButton_Click(object sender, RoutedEventArgs e)
         {
             int userId = Convert.ToInt32((sender as Button).Tag);
             User selectedUser = usersList.Find(u => u.UserID == userId);
-
             if (selectedUser != null)
             {
                 EditUserWindow editWindow = new EditUserWindow(selectedUser);
                 editWindow.Owner = this;
-
                 if (editWindow.ShowDialog() == true)
                 {
                     LoadUsersData();
@@ -124,16 +122,10 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Удаляет выбранного пользователя из базы данных после подтверждения.
-        /// </summary>
         private void DeleteUserButton_Click(object sender, RoutedEventArgs e)
         {
             int userId = Convert.ToInt32((sender as Button).Tag);
-
-            // Подтверждение удаления
             MessageBoxResult result = MessageBox.Show("Вы уверены, что хотите удалить этого пользователя?", "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
             if (result == MessageBoxResult.Yes)
             {
                 if (DeleteUserFromDatabase(userId))
@@ -148,9 +140,6 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Удаляет пользователя из базы данных вместе с его учетными данными.
-        /// </summary>
         private bool DeleteUserFromDatabase(int userId)
         {
             using (MySqlConnection connection = Database.GetConnection())
@@ -159,19 +148,14 @@ namespace Volunteers.Views
                 {
                     connection.Open();
                     MySqlTransaction transaction = connection.BeginTransaction();
-
-                    // Удаление учетных данных
                     string deleteCredentialQuery = "DELETE FROM usercredentials WHERE UserID=@UserID";
                     MySqlCommand cmdCredential = new MySqlCommand(deleteCredentialQuery, connection, transaction);
                     cmdCredential.Parameters.AddWithValue("@UserID", userId);
                     cmdCredential.ExecuteNonQuery();
-
-                    // Удаление пользователя
                     string deleteUserQuery = "DELETE FROM users WHERE UserID=@UserID";
                     MySqlCommand cmdUser = new MySqlCommand(deleteUserQuery, connection, transaction);
                     cmdUser.Parameters.AddWithValue("@UserID", userId);
                     cmdUser.ExecuteNonQuery();
-
                     transaction.Commit();
                     return true;
                 }
@@ -183,22 +167,14 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Обработчик нажатия кнопки "Поиск" для пользователей.
-        /// Выполняет поиск пользователей по имени, фамилии, email и роли.
-        /// </summary>
         private void UserSearchButton_Click(object sender, RoutedEventArgs e)
         {
             string searchQuery = UserSearchTextBox.Text.Trim();
-
             if (string.IsNullOrEmpty(searchQuery))
             {
-                // Если поле поиска пустое, загрузить всех пользователей
                 LoadUsersData();
                 return;
             }
-
-            // Выполнить поиск пользователей по имени, фамилии, email или роли
             try
             {
                 using (MySqlConnection connection = Database.GetConnection())
@@ -213,14 +189,12 @@ namespace Volunteers.Views
                                      OR u.Role LIKE @Search";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
                     cmd.Parameters.AddWithValue("@Search", "%" + searchQuery + "%");
-
                     List<User> filteredUsers = new List<User>();
-
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            User user = new User
+                            filteredUsers.Add(new User
                             {
                                 UserID = reader.GetInt32("UserID"),
                                 Name = reader.GetString("Name"),
@@ -232,14 +206,10 @@ namespace Volunteers.Views
                                 Gender = reader.GetString("Gender"),
                                 Address = reader.IsDBNull(reader.GetOrdinal("Address")) ? "" : reader.GetString("Address"),
                                 Role = reader.GetString("Role")
-                            };
-                            filteredUsers.Add(user);
+                            });
                         }
                     }
-
                     UsersDataGrid.ItemsSource = filteredUsers;
-
-                    // Если не найдено ни одного пользователя, уведомить пользователя
                     if (filteredUsers.Count == 0)
                     {
                         MessageBox.Show("Ни одного пользователя не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -252,20 +222,12 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Обработчик нажатия кнопки "Сбросить" для пользователей.
-        /// Очищает поле поиска и загружает всех пользователей.
-        /// </summary>
         private void UserResetButton_Click(object sender, RoutedEventArgs e)
         {
-            UserSearchTextBox.Clear(); // Очистить поле поиска
-            LoadUsersData();           // Загрузить всех пользователей
+            UserSearchTextBox.Clear();
+            LoadUsersData();
         }
 
-        /// <summary>
-        /// Обработчик нажатия клавиши Enter в поле поиска пользователей.
-        /// Позволяет запускать поиск по нажатию Enter.
-        /// </summary>
         private void UserSearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
@@ -278,13 +240,9 @@ namespace Volunteers.Views
 
         #region Управление Проектами
 
-        /// <summary>
-        /// Загружает данные проектов из базы данных и отображает их в DataGrid.
-        /// </summary>
         private void LoadProjectsData()
         {
             projectsList = new List<Project>();
-
             using (MySqlConnection connection = Database.GetConnection())
             {
                 try
@@ -292,23 +250,20 @@ namespace Volunteers.Views
                     connection.Open();
                     string query = @"SELECT ProjectID, ProjectName, StartDate, EndDate, Status FROM projects";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
-
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            Project project = new Project
+                            projectsList.Add(new Project
                             {
                                 ProjectID = reader.GetInt32("ProjectID"),
                                 ProjectName = reader.GetString("ProjectName"),
                                 StartDate = reader.GetDateTime("StartDate"),
                                 EndDate = reader.GetDateTime("EndDate"),
                                 Status = reader.GetString("Status")
-                            };
-                            projectsList.Add(project);
+                            });
                         }
                     }
-
                     ProjectsDataGrid.ItemsSource = projectsList;
                 }
                 catch (MySqlException ex)
@@ -316,38 +271,27 @@ namespace Volunteers.Views
                     MessageBox.Show("Ошибка загрузки данных проектов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-
-            // После загрузки проектов, обновляем задачи
             LoadTasksData();
         }
 
-        /// <summary>
-        /// Открывает окно для добавления нового проекта.
-        /// </summary>
         private void AddProjectButton_Click(object sender, RoutedEventArgs e)
         {
             AddProjectWindow addProjectWindow = new AddProjectWindow();
             addProjectWindow.Owner = this;
-
             if (addProjectWindow.ShowDialog() == true)
             {
                 LoadProjectsData();
             }
         }
 
-        /// <summary>
-        /// Открывает окно для редактирования выбранного проекта.
-        /// </summary>
         private void EditProjectButton_Click(object sender, RoutedEventArgs e)
         {
             int projectId = Convert.ToInt32((sender as Button).Tag);
             Project selectedProject = projectsList.Find(p => p.ProjectID == projectId);
-
             if (selectedProject != null)
             {
                 EditProjectWindow editWindow = new EditProjectWindow(selectedProject);
                 editWindow.Owner = this;
-
                 if (editWindow.ShowDialog() == true)
                 {
                     LoadProjectsData();
@@ -355,16 +299,10 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Удаляет выбранный проект из базы данных после подтверждения.
-        /// </summary>
         private void DeleteProjectButton_Click(object sender, RoutedEventArgs e)
         {
             int projectId = Convert.ToInt32((sender as Button).Tag);
-
-            // Подтверждение удаления
             MessageBoxResult result = MessageBox.Show("Вы уверены, что хотите удалить этот проект?", "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
             if (result == MessageBoxResult.Yes)
             {
                 if (DeleteProjectFromDatabase(projectId))
@@ -379,9 +317,6 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Удаляет проект из базы данных вместе со связанными задачами.
-        /// </summary>
         private bool DeleteProjectFromDatabase(int projectId)
         {
             using (MySqlConnection connection = Database.GetConnection())
@@ -390,19 +325,14 @@ namespace Volunteers.Views
                 {
                     connection.Open();
                     MySqlTransaction transaction = connection.BeginTransaction();
-
-                    // Удаление задач, связанных с проектом
                     string deleteTasksQuery = "DELETE FROM tasks WHERE ProjectID=@ProjectID";
                     MySqlCommand cmdTasks = new MySqlCommand(deleteTasksQuery, connection, transaction);
                     cmdTasks.Parameters.AddWithValue("@ProjectID", projectId);
                     cmdTasks.ExecuteNonQuery();
-
-                    // Удаление проектов
                     string deleteProjectQuery = "DELETE FROM projects WHERE ProjectID=@ProjectID";
                     MySqlCommand cmdProject = new MySqlCommand(deleteProjectQuery, connection, transaction);
                     cmdProject.Parameters.AddWithValue("@ProjectID", projectId);
                     cmdProject.ExecuteNonQuery();
-
                     transaction.Commit();
                     return true;
                 }
@@ -414,22 +344,14 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Обработчик нажатия кнопки "Поиск" для проектов.
-        /// Выполняет поиск проектов по названию или статусу.
-        /// </summary>
         private void ProjectSearchButton_Click(object sender, RoutedEventArgs e)
         {
             string searchQuery = ProjectSearchTextBox.Text.Trim();
-
             if (string.IsNullOrEmpty(searchQuery))
             {
-                // Если поле поиска пустое, загрузить все проекты
                 LoadProjectsData();
                 return;
             }
-
-            // Выполнить поиск проектов по названию или статусу
             try
             {
                 using (MySqlConnection connection = Database.GetConnection())
@@ -440,28 +362,22 @@ namespace Volunteers.Views
                                      WHERE ProjectName LIKE @Search OR Status LIKE @Search";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
                     cmd.Parameters.AddWithValue("@Search", "%" + searchQuery + "%");
-
                     List<Project> filteredProjects = new List<Project>();
-
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            Project project = new Project
+                            filteredProjects.Add(new Project
                             {
                                 ProjectID = reader.GetInt32("ProjectID"),
                                 ProjectName = reader.GetString("ProjectName"),
                                 StartDate = reader.GetDateTime("StartDate"),
                                 EndDate = reader.GetDateTime("EndDate"),
                                 Status = reader.GetString("Status")
-                            };
-                            filteredProjects.Add(project);
+                            });
                         }
                     }
-
                     ProjectsDataGrid.ItemsSource = filteredProjects;
-
-                    // Если не найдено ни одного проекта, уведомить пользователя
                     if (filteredProjects.Count == 0)
                     {
                         MessageBox.Show("Ни одного проекта не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -474,20 +390,12 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Обработчик нажатия кнопки "Сбросить" для проектов.
-        /// Очищает поле поиска и загружает все проекты.
-        /// </summary>
         private void ProjectResetButton_Click(object sender, RoutedEventArgs e)
         {
-            ProjectSearchTextBox.Clear(); // Очистить поле поиска
-            LoadProjectsData();           // Загрузить все проекты
+            ProjectSearchTextBox.Clear();
+            LoadProjectsData();
         }
 
-        /// <summary>
-        /// Обработчик нажатия клавиши Enter в поле поиска проектов.
-        /// Позволяет запускать поиск по нажатию Enter.
-        /// </summary>
         private void ProjectSearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
@@ -500,13 +408,9 @@ namespace Volunteers.Views
 
         #region Управление Задачами
 
-        /// <summary>
-        /// Загружает данные задач из базы данных и отображает их в DataGrid.
-        /// </summary>
         private void LoadTasksData()
         {
             tasksList = new List<TaskModel>();
-
             using (MySqlConnection connection = Database.GetConnection())
             {
                 try
@@ -517,12 +421,11 @@ namespace Volunteers.Views
                                      JOIN projects p ON t.ProjectID = p.ProjectID
                                      JOIN taskinfo ti ON t.TaskID = ti.TaskID";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
-
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            TaskModel task = new TaskModel
+                            tasksList.Add(new TaskModel
                             {
                                 TaskID = reader.GetInt32("TaskID"),
                                 ProjectName = reader.GetString("ProjectName"),
@@ -530,11 +433,9 @@ namespace Volunteers.Views
                                 Status = reader.GetString("Status"),
                                 Location = reader.GetString("Location"),
                                 Date = reader.GetDateTime("Date")
-                            };
-                            tasksList.Add(task);
+                            });
                         }
                     }
-
                     TasksDataGrid.ItemsSource = tasksList;
                 }
                 catch (MySqlException ex)
@@ -544,33 +445,24 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Открывает окно для добавления новой задачи.
-        /// </summary>
         private void AddTaskButton_Click(object sender, RoutedEventArgs e)
         {
-            AddTaskWindow addTaskWindow = new AddTaskWindow(projectsList); // Передаем список проектов для выбора
+            AddTaskWindow addTaskWindow = new AddTaskWindow(projectsList);
             addTaskWindow.Owner = this;
-
             if (addTaskWindow.ShowDialog() == true)
             {
                 LoadTasksData();
             }
         }
 
-        /// <summary>
-        /// Открывает окно для редактирования выбранной задачи.
-        /// </summary>
         private void EditTaskButton_Click(object sender, RoutedEventArgs e)
         {
             int taskId = Convert.ToInt32((sender as Button).Tag);
             TaskModel selectedTask = tasksList.Find(t => t.TaskID == taskId);
-
             if (selectedTask != null)
             {
                 EditTaskWindow editTaskWindow = new EditTaskWindow(selectedTask, projectsList);
                 editTaskWindow.Owner = this;
-
                 if (editTaskWindow.ShowDialog() == true)
                 {
                     LoadTasksData();
@@ -578,16 +470,10 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Удаляет выбранную задачу из базы данных после подтверждения.
-        /// </summary>
         private void DeleteTaskButton_Click(object sender, RoutedEventArgs e)
         {
             int taskId = Convert.ToInt32((sender as Button).Tag);
-
-            // Подтверждение удаления
             MessageBoxResult result = MessageBox.Show("Вы уверены, что хотите удалить эту задачу?", "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
             if (result == MessageBoxResult.Yes)
             {
                 if (DeleteTaskFromDatabase(taskId))
@@ -602,9 +488,6 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Удаляет задачу из базы данных вместе с информацией о задаче.
-        /// </summary>
         private bool DeleteTaskFromDatabase(int taskId)
         {
             using (MySqlConnection connection = Database.GetConnection())
@@ -613,25 +496,18 @@ namespace Volunteers.Views
                 {
                     connection.Open();
                     MySqlTransaction transaction = connection.BeginTransaction();
-
-                    // Удаление из таблицы user_tasks
                     string deleteUserTasksQuery = "DELETE FROM user_tasks WHERE TaskID=@TaskID";
                     MySqlCommand cmdUserTasks = new MySqlCommand(deleteUserTasksQuery, connection, transaction);
                     cmdUserTasks.Parameters.AddWithValue("@TaskID", taskId);
                     cmdUserTasks.ExecuteNonQuery();
-
-                    // Удаление из taskinfo
                     string deleteTaskInfoQuery = "DELETE FROM taskinfo WHERE TaskID=@TaskID";
                     MySqlCommand cmdTaskInfo = new MySqlCommand(deleteTaskInfoQuery, connection, transaction);
                     cmdTaskInfo.Parameters.AddWithValue("@TaskID", taskId);
                     cmdTaskInfo.ExecuteNonQuery();
-
-                    // Удаление из tasks
                     string deleteTaskQuery = "DELETE FROM tasks WHERE TaskID=@TaskID";
                     MySqlCommand cmdTask = new MySqlCommand(deleteTaskQuery, connection, transaction);
                     cmdTask.Parameters.AddWithValue("@TaskID", taskId);
                     cmdTask.ExecuteNonQuery();
-
                     transaction.Commit();
                     return true;
                 }
@@ -643,22 +519,14 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Обработчик нажатия кнопки "Поиск" для задач.
-        /// Выполняет поиск задач по описанию, статусу или проекту.
-        /// </summary>
         private void TaskSearchButton_Click(object sender, RoutedEventArgs e)
         {
             string searchQuery = TaskSearchTextBox.Text.Trim();
-
             if (string.IsNullOrEmpty(searchQuery))
             {
-                // Если поле поиска пустое, загрузить все задачи
                 LoadTasksData();
                 return;
             }
-
-            // Выполнить поиск задач по описанию, статусу или названию проекта
             try
             {
                 using (MySqlConnection connection = Database.GetConnection())
@@ -673,14 +541,12 @@ namespace Volunteers.Views
                                      OR p.ProjectName LIKE @Search";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
                     cmd.Parameters.AddWithValue("@Search", "%" + searchQuery + "%");
-
                     List<TaskModel> filteredTasks = new List<TaskModel>();
-
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            TaskModel task = new TaskModel
+                            filteredTasks.Add(new TaskModel
                             {
                                 TaskID = reader.GetInt32("TaskID"),
                                 ProjectName = reader.GetString("ProjectName"),
@@ -688,14 +554,10 @@ namespace Volunteers.Views
                                 Status = reader.GetString("Status"),
                                 Location = reader.GetString("Location"),
                                 Date = reader.GetDateTime("Date")
-                            };
-                            filteredTasks.Add(task);
+                            });
                         }
                     }
-
                     TasksDataGrid.ItemsSource = filteredTasks;
-
-                    // Если не найдено ни одной задачи, уведомить пользователя
                     if (filteredTasks.Count == 0)
                     {
                         MessageBox.Show("Ни одной задачи не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -708,20 +570,12 @@ namespace Volunteers.Views
             }
         }
 
-        /// <summary>
-        /// Обработчик нажатия кнопки "Сбросить" для задач.
-        /// Очищает поле поиска и загружает все задачи.
-        /// </summary>
         private void TaskResetButton_Click(object sender, RoutedEventArgs e)
         {
-            TaskSearchTextBox.Clear(); // Очистить поле поиска
-            LoadTasksData();           // Загрузить все задачи
+            TaskSearchTextBox.Clear();
+            LoadTasksData();
         }
 
-        /// <summary>
-        /// Обработчик нажатия клавиши Enter в поле поиска задач.
-        /// Позволяет запускать поиск по нажатию Enter.
-        /// </summary>
         private void TaskSearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
@@ -732,23 +586,8 @@ namespace Volunteers.Views
 
         #endregion
 
-        /// <summary>
-        /// Обработчик закрытия окна администратора.
-        /// Возвращает пользователя к окну авторизации.
-        /// </summary>
-        private void Window_Closed(object sender, EventArgs e)
-        {
-            if (this.Owner != null)
-            {
-                MainWindow mainWindow = this.Owner as MainWindow;
-                if (mainWindow != null)
-                {
-                    // Очищаем поля логина и пароля
-                    mainWindow.ClearLoginFields();
-                    mainWindow.Show(); // Показываем окно авторизации
-                }
-            }
-        }
+        #region Управление Учетными Записями
+
         private void LoadAccounts()
         {
             try
@@ -757,33 +596,31 @@ namespace Volunteers.Views
                 {
                     connection.Open();
                     string query = @"SELECT u.UserID, u.Name, u.Surname, uc.Login, uc.Password 
-                           FROM users u
-                           INNER JOIN usercredentials uc ON u.UserID = uc.UserID
-                           ORDER BY u.UserID";
-
+                                    FROM users u
+                                    INNER JOIN usercredentials uc ON u.UserID = uc.UserID
+                                    ORDER BY u.UserID";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
-                    MySqlDataReader reader = cmd.ExecuteReader();
-
-                    var accounts = new List<UserAccount>();
-                    while (reader.Read())
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
-                        accounts.Add(new UserAccount
+                        var accounts = new List<UserAccount>();
+                        while (reader.Read())
                         {
-                            UserID = reader.GetInt32("UserID"),
-                            Name = reader.GetString("Name"),
-                            Surname = reader.GetString("Surname"),
-                            Login = reader.GetString("Login"),
-                            Password = reader.GetString("Password")
-                        });
+                            accounts.Add(new UserAccount
+                            {
+                                UserID = reader.GetInt32("UserID"),
+                                Name = reader.GetString("Name"),
+                                Surname = reader.GetString("Surname"),
+                                Login = reader.GetString("Login"),
+                                Password = reader.GetString("Password")
+                            });
+                        }
+                        AccountsDataGrid.ItemsSource = accounts;
                     }
-
-                    AccountsDataGrid.ItemsSource = accounts;
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка загрузки данных: {ex.Message}", "Ошибка",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка загрузки данных: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -795,24 +632,24 @@ namespace Volunteers.Views
             }
         }
 
-        // В AdminWindow.xaml.cs
         private void AccountSearchButton_Click(object sender, RoutedEventArgs e)
         {
             string searchQuery = AccountSearchTextBox.Text.Trim();
-
             if (string.IsNullOrEmpty(searchQuery))
             {
                 LoadAccounts();
                 return;
             }
-
             var filtered = ((List<UserAccount>)AccountsDataGrid.ItemsSource)
-                .Where(a => a.Name.Contains(searchQuery) ||
-                           a.Surname.Contains(searchQuery) ||
-                           a.Login.Contains(searchQuery))
+                .Where(a => a.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                            a.Surname.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                            a.Login.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-
             AccountsDataGrid.ItemsSource = filtered;
+            if (filtered.Count == 0)
+            {
+                MessageBox.Show("Ни одной учетной записи не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
 
         private void AccountResetButton_Click(object sender, RoutedEventArgs e)
@@ -829,6 +666,32 @@ namespace Volunteers.Views
             }
         }
 
+        private void EditAccountButton_Click(object sender, RoutedEventArgs e)
+        {
+            int userId = Convert.ToInt32((sender as Button).Tag);
+            EditAccountWindow editWindow = new EditAccountWindow(userId);
+            editWindow.Owner = this;
+            if (editWindow.ShowDialog() == true)
+            {
+                LoadAccounts();
+            }
+        }
+
+        public class UserAccount
+        {
+            public int UserID { get; set; }
+            public string Name { get; set; }
+            public string Surname { get; set; }
+            public string Login { get; set; }
+            public string Password { get; set; }
+            public bool IsPasswordVisible { get; set; }
+            public string DisplayPassword => IsPasswordVisible ? Password : new string('•', Password?.Length ?? 0);
+        }
+
+        #endregion
+
+        #region Управление Назначением Задач
+
         public class UserTask
         {
             public string FullName { get; set; }
@@ -836,46 +699,39 @@ namespace Volunteers.Views
             public string ProjectName { get; set; }
             public string Status { get; set; }
         }
-        private List<UserTaskAssignment> _allUserTasks = new List<UserTaskAssignment>();
-        // Загрузка данных
+
         public void LoadUserTasks()
         {
             ObservableCollection<UserTask> userTasks = new ObservableCollection<UserTask>();
-
             using (MySqlConnection connection = Database.GetConnection())
             {
                 try
                 {
                     connection.Open();
                     string query = @"SELECT 
-                                CONCAT(u.Name, ' ', u.Surname) AS FullName, 
-                                t.Description, 
-                                p.ProjectName, 
-                                t.Status
-                              FROM user_tasks ut
-                              JOIN users u ON ut.UserID = u.UserID
-                              JOIN tasks t ON ut.TaskID = t.TaskID
-                              JOIN projects p ON ut.ProjectID = p.ProjectID";
-
+                                    CONCAT(u.Name, ' ', u.Surname) AS FullName, 
+                                    t.Description, 
+                                    p.ProjectName, 
+                                    t.Status
+                                    FROM user_tasks ut
+                                    JOIN users u ON ut.UserID = u.UserID
+                                    JOIN tasks t ON ut.TaskID = t.TaskID
+                                    JOIN projects p ON ut.ProjectID = p.ProjectID";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
-
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            UserTask task = new UserTask
+                            userTasks.Add(new UserTask
                             {
                                 FullName = reader.GetString("FullName"),
                                 Description = reader.GetString("Description"),
                                 ProjectName = reader.GetString("ProjectName"),
                                 Status = reader.GetString("Status")
-                            };
-                            userTasks.Add(task);
+                            });
                         }
                     }
-
-                    UserTasksDataGrid.ItemsSource = userTasks; // Обновляем источник данных
-
+                    UserTasksDataGrid.ItemsSource = userTasks;
                 }
                 catch (MySqlException ex)
                 {
@@ -884,115 +740,266 @@ namespace Volunteers.Views
             }
         }
 
-        public ObservableCollection<UserTask> UserTasks { get; set; } = new ObservableCollection<UserTask>();
-
-
-
-        //private void UserTaskResetButton_Click(object sender, RoutedEventArgs e)
-        //{
-        //    UserTasksDataGrid.ItemsSource = _allUserTasks;
-        //    UserTaskSearchTextBox.Clear();
-        //}
-
-        private void UserTaskSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        private void UserTaskSearchButton_Click(object sender, RoutedEventArgs e)
         {
-            if (e.Key == Key.Enter)  // Когда нажата клавиша Enter
+            string searchQuery = UserTaskSearchTextBox.Text.Trim();
+            if (string.IsNullOrEmpty(searchQuery))
             {
-                
+                LoadUserTasks();
+                return;
+            }
+            try
+            {
+                using (MySqlConnection connection = Database.GetConnection())
+                {
+                    connection.Open();
+                    string query = @"SELECT 
+                                    CONCAT(u.Name, ' ', u.Surname) AS FullName, 
+                                    t.Description, 
+                                    p.ProjectName, 
+                                    t.Status
+                                    FROM user_tasks ut
+                                    JOIN users u ON ut.UserID = u.UserID
+                                    JOIN tasks t ON ut.TaskID = t.TaskID
+                                    JOIN projects p ON ut.ProjectID = p.ProjectID
+                                    WHERE u.Name LIKE @Search 
+                                    OR u.Surname LIKE @Search 
+                                    OR t.Description LIKE @Search 
+                                    OR p.ProjectName LIKE @Search 
+                                    OR t.Status LIKE @Search";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@Search", "%" + searchQuery + "%");
+                    ObservableCollection<UserTask> filteredTasks = new ObservableCollection<UserTask>();
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            filteredTasks.Add(new UserTask
+                            {
+                                FullName = reader.GetString("FullName"),
+                                Description = reader.GetString("Description"),
+                                ProjectName = reader.GetString("ProjectName"),
+                                Status = reader.GetString("Status")
+                            });
+                        }
+                    }
+                    UserTasksDataGrid.ItemsSource = filteredTasks;
+                    if (filteredTasks.Count == 0)
+                    {
+                        MessageBox.Show("Ни одной задачи не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+            }
+            catch (MySqlException ex)
+            {
+                MessageBox.Show("Ошибка при поиске задач: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-
-        private void AddParticipationButton_Click()
+        private void UserTaskResetButton_Click(object sender, RoutedEventArgs e)
         {
-
-        }
-
-       
-
-
-        private void AddUserTaskButton_Click(object sender, RoutedEventArgs e)
-        {
-            //Добавление задачи пользователю
-        }
-        private void RefreshUserTasksButton_Click(object sender, RoutedEventArgs e)
-        {
+            UserTaskSearchTextBox.Clear();
             LoadUserTasks();
+        }
+
+        private void UserTaskSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                UserTaskSearchButton_Click(sender, e);
+            }
         }
 
         private void AddParticipationButton_Click(object sender, RoutedEventArgs e)
         {
             AddParticipationWindow addParticipationWindow = new AddParticipationWindow();
-            addParticipationWindow.ShowDialog();
-
-        }
-
-        
-        
-
-        public ObservableCollection<TaskModel> FilteredTasks { get; set; } = new ObservableCollection<TaskModel>();
-
-        private List<Task> allTasks;
-
-
-
-        private void EditAccountButton_Click(object sender, RoutedEventArgs e)
-        {
-            // Получаем ID пользователя из кнопки (передается через Tag)
-            int userId = Convert.ToInt32((sender as Button).Tag);
-
-            // Открываем окно редактирования учетной записи с выбранным пользователем
-            EditAccountWindow editWindow = new EditAccountWindow(userId);
-            editWindow.Owner = this;
-
-            // Если пользователь нажал "Сохранить" в окне редактирования, обновляем DataGrid
-            if (editWindow.ShowDialog() == true)
+            addParticipationWindow.Owner = this;
+            if (addParticipationWindow.ShowDialog() == true)
             {
-                LoadUsersData();  // Перезагружаем данные в DataGrid
+                LoadUserTasks();
             }
         }
 
+        #endregion
 
+        #region Управление Заявками
 
-        private void LoadUserCredentialsData()
+        private void LoadRequestsData()
         {
-            // Ваш код для загрузки и отображения данных учетных записей пользователей
-            // Например:
+            requestsList = new List<RequestModel>();
             using (MySqlConnection connection = Database.GetConnection())
             {
                 try
                 {
                     connection.Open();
-                    string query = @"SELECT u.UserID, u.Name, u.Surname, uc.Login, uc.Password
-                             FROM users u
-                             LEFT JOIN usercredentials uc ON u.UserID = uc.UserID
-                             ORDER BY u.UserID";
-
+                    string query = @"
+                        SELECT 
+                            upa.RequestID,
+                            u.Name,
+                            u.Surname,
+                            u.Email,
+                            u.Phone,
+                            u.DateOfBirth,
+                            p.ProjectName,
+                            t.Description AS TaskDescription,
+                            upa.Status
+                        FROM users_pending_approval upa
+                        JOIN users u ON upa.UserID = u.UserID
+                        JOIN tasks t ON upa.TaskID = t.TaskID
+                        JOIN taskinfo ti ON t.TaskID = ti.TaskID
+                        JOIN projects p ON t.ProjectID = p.ProjectID
+                        WHERE u.Role = 'Волонтер'
+                        ORDER BY upa.CreatedAt DESC";
                     MySqlCommand cmd = new MySqlCommand(query, connection);
-                    MySqlDataReader reader = cmd.ExecuteReader();
-
-                    List<UserCredential> userCredentialsList = new List<UserCredential>();
-
-                    while (reader.Read())
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
-                        UserCredential userCredential = new UserCredential
+                        while (reader.Read())
                         {
-                            UserID = reader.GetInt32("UserID"),
-                            Login = reader.IsDBNull(reader.GetOrdinal("Login")) || string.IsNullOrEmpty(reader.GetString("Login")) ? "Без логина" : reader.GetString("Login"),
-                            Password = reader.IsDBNull(reader.GetOrdinal("Password")) || string.IsNullOrEmpty(reader.GetString("Password")) ? "Без пароля" : reader.GetString("Password")
-                        };
-                        userCredentialsList.Add(userCredential);
+                            requestsList.Add(new RequestModel
+                            {
+                                RequestID = reader.GetInt32("RequestID"),
+                                Name = reader.GetString("Name"),
+                                Surname = reader.GetString("Surname"),
+                                Email = reader.GetString("Email"),
+                                Phone = reader.GetString("Phone"),
+                                DateOfBirth = reader.GetDateTime("DateOfBirth"),
+                                ProjectName = reader.GetString("ProjectName"),
+                                TaskDescription = reader.GetString("TaskDescription"),
+                                Status = reader.GetString("Status")
+                            });
+                        }
                     }
-
-                    // Привязка данных к DataGrid
-                    AccountsDataGrid.ItemsSource = userCredentialsList;
+                    RequestsDataGrid.ItemsSource = requestsList;
                 }
                 catch (MySqlException ex)
                 {
-                    MessageBox.Show("Ошибка при загрузке данных: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Ошибка загрузки заявок: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
+
+        private void SearchRequestButton_Click(object sender, RoutedEventArgs e)
+        {
+            string searchQuery = SearchRequestBox.Text.Trim();
+            if (string.IsNullOrEmpty(searchQuery))
+            {
+                LoadRequestsData();
+                return;
+            }
+            try
+            {
+                using (MySqlConnection connection = Database.GetConnection())
+                {
+                    connection.Open();
+                    string query = @"
+                        SELECT 
+                            upa.RequestID,
+                            u.Name,
+                            u.Surname,
+                            u.Email,
+                            u.Phone,
+                            u.DateOfBirth,
+                            p.ProjectName,
+                            t.Description AS TaskDescription,
+                            upa.Status
+                        FROM users_pending_approval upa
+                        JOIN users u ON upa.UserID = u.UserID
+                        JOIN tasks t ON upa.TaskID = t.TaskID
+                        JOIN taskinfo ti ON t.TaskID = ti.TaskID
+                        JOIN projects p ON t.ProjectID = p.ProjectID
+                        WHERE u.Role = 'Волонтер'
+                        AND (u.Name LIKE @Search 
+                             OR u.Surname LIKE @Search 
+                             OR u.Email LIKE @Search 
+                             OR p.ProjectName LIKE @Search 
+                             OR t.Description LIKE @Search 
+                             OR upa.Status LIKE @Search)
+                        ORDER BY upa.CreatedAt DESC";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@Search", "%" + searchQuery + "%");
+                    List<RequestModel> filteredRequests = new List<RequestModel>();
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            filteredRequests.Add(new RequestModel
+                            {
+                                RequestID = reader.GetInt32("RequestID"),
+                                Name = reader.GetString("Name"),
+                                Surname = reader.GetString("Surname"),
+                                Email = reader.GetString("Email"),
+                                Phone = reader.GetString("Phone"),
+                                DateOfBirth = reader.GetDateTime("DateOfBirth"),
+                                ProjectName = reader.GetString("ProjectName"),
+                                TaskDescription = reader.GetString("TaskDescription"),
+                                Status = reader.GetString("Status")
+                            });
+                        }
+                    }
+                    RequestsDataGrid.ItemsSource = filteredRequests;
+                    if (filteredRequests.Count == 0)
+                    {
+                        MessageBox.Show("Ни одной заявки не найдено по заданному запросу.", "Результаты поиска", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+            }
+            catch (MySqlException ex)
+            {
+                MessageBox.Show("Ошибка при поиске заявок: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ResetRequestButton_Click(object sender, RoutedEventArgs e)
+        {
+            SearchRequestBox.Clear();
+            LoadRequestsData();
+        }
+
+        private void SearchRequestBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                SearchRequestButton_Click(sender, e);
+            }
+        }
+
+        private void ApproveRequestButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            int requestId = Convert.ToInt32(button.Tag);
+            try
+            {
+                Database.ApproveRequest(requestId);
+                MessageBox.Show("Заявка успешно одобрена.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                LoadRequestsData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при одобрении заявки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void RejectRequestButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            int requestId = Convert.ToInt32(button.Tag);
+            try
+            {
+                Database.RejectRequest(requestId);
+                MessageBox.Show("Заявка успешно отклонена.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                LoadRequestsData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при отклонении заявки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+     
+
+        #endregion
+
+        #region Вспомогательные классы и методы
 
         public class UserCredential
         {
@@ -1001,37 +1008,10 @@ namespace Volunteers.Views
             public string Surname { get; set; }
             public string Login { get; set; }
             public string Password { get; set; }
-
-            public string DisplayPassword
-            {
-                get
-                {
-                    return string.IsNullOrEmpty(Password) ? "Без пароля" : Password;
-                }
-            }
-
-            public string DisplayLogin
-            {
-                get
-                {
-                    return string.IsNullOrEmpty(Login) ? "Без логина" : Login;
-                }
-            }
+            public string DisplayPassword => string.IsNullOrEmpty(Password) ? "Без пароля" : Password;
+            public string DisplayLogin => string.IsNullOrEmpty(Login) ? "Без логина" : Login;
         }
 
-        private void UserTaskSearchButton_Click(object sender, RoutedEventArgs e)
-        {
-
-        }
-
-        private void UserTaskResetButton_Click(object sender, RoutedEventArgs e)
-        {
-
-        }
+        #endregion
     }
-
-
-
-
-
 }

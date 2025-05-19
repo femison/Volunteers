@@ -4,16 +4,18 @@
         Title="Панель Администратора" Height="1030" Width="1600"
         WindowStartupLocation="CenterScreen"
         Activated="Window_Activated"
+        WindowState="Maximized"
         Closed="Window_Closed"
-        Background="#F5F7FA">
+        Background="#F5F7FA"
+        Language="ru-RU">
+
 
     <Window.Resources>
-        
         <!-- Стиль для TextBlock в DataGrid -->
         <Style x:Key="DataGridTextBlockStyle" TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Padding" Value="15,0"/>
             <Setter Property="ToolTip" Value="{Binding Path=Text, RelativeSource={RelativeSource Self}}"/>
         </Style>
 
@@ -46,7 +48,7 @@
                                 <Setter TargetName="Border" Property="Background" Value="White"/>
                                 <Setter TargetName="Border" Property="BorderBrush" Value="#3498DB"/>
                                 <Setter Property="Foreground" Value="#3498DB"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontWeight" Value="Normal"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Border" Property="Background" Value="#ECF0F1"/>
@@ -61,16 +63,13 @@
             </Setter>
         </Style>
 
-        
-        
-        
         <!-- Базовый стиль для кнопок -->
         <Style TargetType="Button" x:Key="BaseButtonStyle">
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Padding" Value="4"/>
             <Setter Property="Margin" Value="5"/>
-            <Setter Property="MinWidth" Value="100"/>
+           
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="#3498DB"/>
             <Setter Property="Foreground" Value="White"/>
@@ -119,9 +118,7 @@
         <Style TargetType="Button" x:Key="SearchButtonStyle" BasedOn="{StaticResource BaseButtonStyle}">
             <Setter Property="Background" Value="#7F8C8D"/>
         </Style>
-        
-        
-        
+
         <!-- Стиль для заголовков DataGrid -->
         <Style x:Key="DataGridHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="#34495E"/>
@@ -162,6 +159,31 @@
             </Style.Triggers>
         </Style>
 
+        <!-- Стиль для ячеек DataGrid -->
+        <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="0,0,1,1"
+                                Padding="0,0">
+                            <ContentPresenter VerticalAlignment="Stretch"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#3498DB"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Стиль для заголовка окна -->
         <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="28"/>
@@ -194,7 +216,7 @@
                         Click="EditUserButton_Click" 
                         Tag="{Binding UserID}" 
                         Style="{StaticResource SecondaryButtonStyle}" 
-                        Width="15" Height="36" 
+                        Width="36" Height="36" 
                         Padding="8" 
                         Margin="4"
                         Content="✏️"/>
@@ -215,7 +237,7 @@
                         Click="EditProjectButton_Click" 
                         Tag="{Binding ProjectID}" 
                         Style="{StaticResource SecondaryButtonStyle}" 
-                        Width="15" Height="36" 
+                        Width="36" Height="36" 
                         Padding="8" 
                         Margin="4"
                         Content="✏️"/>
@@ -250,6 +272,31 @@
                         Content="🗑️"/>
             </StackPanel>
         </DataTemplate>
+
+        <DataTemplate x:Key="RequestActionButtonsTemplate">
+            <StackPanel Orientation="Horizontal" x:Name="ActionButtonsPanel">
+                <Button Content="✔️" 
+                    Style="{StaticResource SecondaryButtonStyle}" 
+                    Tag="{Binding RequestID}" 
+                    Click="ApproveRequestButton_Click" 
+                    Margin="0,0,5,0" 
+                    ToolTip="Одобрить заявку"/>
+                <Button Content="❌" 
+                    Style="{StaticResource DangerButtonStyle}" 
+                    Tag="{Binding RequestID}" 
+                    Click="RejectRequestButton_Click" 
+                    ToolTip="Отклонить заявку"/>
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <!-- Скрыть кнопки для статусов "Одобрена" и "Отклонена" -->
+                <DataTrigger Binding="{Binding Status}" Value="Одобрена">
+                    <Setter TargetName="ActionButtonsPanel" Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Отклонена">
+                    <Setter TargetName="ActionButtonsPanel" Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
     </Window.Resources>
 
     <Border Background="White" BorderBrush="#E0E0E0" BorderThickness="1" Margin="20,20,20,0">
@@ -266,7 +313,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
+
                         </Grid.RowDefinitions>
 
                         <!-- Панель поиска пользователей -->
@@ -294,32 +341,75 @@
                                   HeadersVisibility="Column"
                                   ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
                                   RowStyle="{StaticResource DataGridRowStyle}"
+                                  CellStyle="{StaticResource DataGridCellStyle}"
                                   SelectionMode="Single"
                                   AlternatingRowBackground="#F9FAFB"
                                   BorderBrush="#E0E0E0"
                                   BorderThickness="1"
                                   GridLinesVisibility="None">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding UserID}" Width="80"/>
-                                <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*"/>
-                                <DataGridTextColumn Header="Фамилия" Binding="{Binding Surname}" Width="*"/>
-                                <DataGridTextColumn Header="Навыки" Binding="{Binding UserSkills}" Width="2*"/>
-                                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
-                                <DataGridTextColumn Header="Телефон" Binding="{Binding Phone}" Width="*"/>
-                                <DataGridTextColumn Header="Дата рождения" Binding="{Binding DateOfBirth, StringFormat=d}" Width="*"/>
-                                <DataGridTextColumn Header="Пол" Binding="{Binding Gender}" Width="80"/>
-                                <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="2*"/>
-                                <DataGridTextColumn Header="Роль" Binding="{Binding Role}" Width="*"/>
-                                <DataGridTemplateColumn Header="Действия" Width="120" 
-                                                        CellTemplate="{StaticResource UserActionButtonsTemplate}"/>
+                                <DataGridTextColumn Header="ID" Binding="{Binding UserID}" Width="80">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Фамилия" Binding="{Binding Surname}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Навыки" Binding="{Binding UserSkills}" Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Телефон" Binding="{Binding Phone}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Дата рождения" 
+                            Binding="{Binding DateOfBirth, StringFormat=d MMMM yyyy}" 
+                            Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Пол" Binding="{Binding Gender}" Width="80">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Роль" Binding="{Binding Role}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="Действия" Width="200" 
+                                                       CellTemplate="{StaticResource UserActionButtonsTemplate}"/>
                             </DataGrid.Columns>
                         </DataGrid>
 
                         <!-- Кнопка "Добавить пользователя" -->
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"/>
                         <Button Content="Добавить пользователя"
-                                    Click="AddUserButton_Click"
-                                    Style="{StaticResource PrimaryButtonStyle}" Margin="14,25,1300,20"/>
+                                Click="AddUserButton_Click"
+                                Style="{StaticResource PrimaryButtonStyle}" 
+                                Margin="14,721,1300,20" Grid.Row="1"/>
                     </Grid>
                 </TabItem>
 
@@ -334,7 +424,7 @@
 
                         <!-- Панель поиска проектов -->
                         <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,10,0,20">
-                            <TextBox x:Name="ProjectSearchTextBox"  Width="320" Height="56"
+                            <TextBox x:Name="ProjectSearchTextBox" Width="320" Height="56"
                                      Style="{StaticResource SearchTextBoxStyle}"
                                      KeyDown="ProjectSearchTextBox_KeyDown"/>
                             <Button Content="Поиск" 
@@ -357,27 +447,52 @@
                                   HeadersVisibility="Column"
                                   ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
                                   RowStyle="{StaticResource DataGridRowStyle}"
+                                  CellStyle="{StaticResource DataGridCellStyle}"
                                   SelectionMode="Single"
                                   AlternatingRowBackground="#F9FAFB"
                                   BorderBrush="#E0E0E0"
                                   BorderThickness="1"
                                   GridLinesVisibility="None">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding ProjectID}" Width="80"/>
-                                <DataGridTextColumn Header="Название" Binding="{Binding ProjectName}" Width="2*"/>
-                                <DataGridTextColumn Header="Дата начала" Binding="{Binding StartDate, StringFormat=d}" Width="*"/>
-                                <DataGridTextColumn Header="Дата окончания" Binding="{Binding EndDate, StringFormat=d}" Width="*"/>
-                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*"/>
-                                <DataGridTemplateColumn Header="Действия" Width="120" 
-                                                        CellTemplate="{StaticResource ProjectActionButtonsTemplate}"/>
+                                <DataGridTextColumn Header="ID" Binding="{Binding ProjectID}" Width="80">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Название" Binding="{Binding ProjectName}" Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Дата начала" 
+                    Binding="{Binding StartDate, StringFormat=d MMMM yyyy}" 
+                    Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Дата окончания" 
+                    Binding="{Binding EndDate, StringFormat=d MMMM yyyy}" 
+                    Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="Действия" Width="200" 
+                                                       CellTemplate="{StaticResource ProjectActionButtonsTemplate}"/>
                             </DataGrid.Columns>
                         </DataGrid>
 
                         <!-- Кнопка "Добавить проект" -->
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"/>
                         <Button Content="Добавить проект"
-                                    Click="AddProjectButton_Click"
-                                    Style="{StaticResource PrimaryButtonStyle}" Margin="14,25,1298,20"/>
+                                Click="AddProjectButton_Click"
+                                Style="{StaticResource PrimaryButtonStyle}" 
+                                Margin="14,25,1298,20" Grid.Row="2"/>
                     </Grid>
                 </TabItem>
 
@@ -391,7 +506,7 @@
 
                         <!-- Панель поиска задач -->
                         <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,10,0,20">
-                            <TextBox x:Name="TaskSearchTextBox"  Width="320" Height="56"
+                            <TextBox x:Name="TaskSearchTextBox" Width="320" Height="56"
                                      Style="{StaticResource SearchTextBoxStyle}"
                                      KeyDown="TaskSearchTextBox_KeyDown"/>
                             <Button Content="Поиск" 
@@ -414,6 +529,7 @@
                                   HeadersVisibility="Column"
                                   ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
                                   RowStyle="{StaticResource DataGridRowStyle}"
+                                  CellStyle="{StaticResource DataGridCellStyle}"
                                   SelectionMode="Single"
                                   AlternatingRowBackground="#F9FAFB"
                                   BorderBrush="#E0E0E0"
@@ -421,22 +537,48 @@
                                   GridLinesVisibility="None"
                                   Margin="0,0,0,46">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding TaskID}" Width="80"/>
-                                <DataGridTextColumn Header="Проект" Binding="{Binding ProjectName}" Width="*"/>
-                                <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="2*"/>
-                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*"/>
-                                <DataGridTextColumn Header="Местоположение" Binding="{Binding Location}" Width="*"/>
-                                <DataGridTextColumn Header="Дата" Binding="{Binding Date, StringFormat=d}" Width="*"/>
-                                <DataGridTemplateColumn Header="Действия" Width="120" 
-                                                        CellTemplate="{StaticResource TaskActionButtonsTemplate}"/>
+                                <DataGridTextColumn Header="ID" Binding="{Binding TaskID}" Width="80">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Проект" Binding="{Binding ProjectName}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Местоположение" Binding="{Binding Location}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Дата" 
+                    Binding="{Binding Date, StringFormat=d MMMM yyyy}" 
+                    Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="Действия" Width="200" 
+                                                       CellTemplate="{StaticResource TaskActionButtonsTemplate}"/>
                             </DataGrid.Columns>
                         </DataGrid>
 
                         <!-- Кнопка "Добавить задачу" -->
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,700,1,4"/>
                         <Button Content="Добавить задачу"
-                                    Click="AddTaskButton_Click"
-                                    Style="{StaticResource PrimaryButtonStyle}" RenderTransformOrigin="0.505,-0.142" Margin="14,25,1300,20"/>
+                                Click="AddTaskButton_Click"
+                                Style="{StaticResource PrimaryButtonStyle}" 
+                                Margin="16,739,1298,8" Grid.Row="1"/>
                     </Grid>
                 </TabItem>
 
@@ -451,7 +593,7 @@
 
                         <!-- Панель поиска задач -->
                         <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,10,0,20">
-                            <TextBox x:Name="UserTaskSearchTextBox"  Width="320" Height="56"
+                            <TextBox x:Name="UserTaskSearchTextBox" Width="320" Height="56"
                                      Style="{StaticResource SearchTextBoxStyle}"
                                      KeyDown="UserTaskSearchTextBox_KeyDown"/>
                             <Button Content="Поиск" 
@@ -474,6 +616,7 @@
                                   HeadersVisibility="Column"
                                   ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
                                   RowStyle="{StaticResource DataGridRowStyle}"
+                                  CellStyle="{StaticResource DataGridCellStyle}"
                                   SelectionMode="Single"
                                   AlternatingRowBackground="#F9FAFB"
                                   BorderBrush="#E0E0E0"
@@ -481,18 +624,34 @@
                                   GridLinesVisibility="None"
                                   Margin="0,0,0,20">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Имя пользователя" Binding="{Binding FullName}" Width="*"/>
-                                <DataGridTextColumn Header="Описание задачи" Binding="{Binding Description}" Width="2*"/>
-                                <DataGridTextColumn Header="Проект" Binding="{Binding ProjectName}" Width="*"/>
-                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*"/>
+                                <DataGridTextColumn Header="Имя пользователя" Binding="{Binding FullName}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Описание задачи" Binding="{Binding Description}" Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Проект" Binding="{Binding ProjectName}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                             </DataGrid.Columns>
                         </DataGrid>
 
                         <!-- Кнопка "Добавить участие" -->
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"/>
                         <Button Content="Добавить участие"
-                                    Click="AddParticipationButton_Click"
-                                    Style="{StaticResource PrimaryButtonStyle}" Margin="14,25,1300,20"/>
+                                Click="AddParticipationButton_Click"
+                                Style="{StaticResource PrimaryButtonStyle}" 
+                                Margin="14,25,1300,20" Grid.Row="2"/>
                     </Grid>
                 </TabItem>
 
@@ -506,7 +665,7 @@
 
                         <!-- Панель поиска -->
                         <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,10,0,20">
-                            <TextBox x:Name="AccountSearchTextBox"  Width="320" Height="56"
+                            <TextBox x:Name="AccountSearchTextBox" Width="320" Height="56"
                                      Style="{StaticResource SearchTextBoxStyle}"
                                      KeyDown="AccountSearchTextBox_KeyDown"/>
                             <Button Content="Поиск"
@@ -529,15 +688,28 @@
                                   HeadersVisibility="Column"
                                   ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
                                   RowStyle="{StaticResource DataGridRowStyle}"
+                                  CellStyle="{StaticResource DataGridCellStyle}"
                                   SelectionMode="Single"
                                   AlternatingRowBackground="#F9FAFB"
                                   BorderBrush="#E0E0E0"
                                   BorderThickness="1"
                                   GridLinesVisibility="None">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*"/>
-                                <DataGridTextColumn Header="Фамилия" Binding="{Binding Surname}" Width="*"/>
-                                <DataGridTextColumn Header="Логин" Binding="{Binding Login}" Width="*"/>
+                                <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Фамилия" Binding="{Binding Surname}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Логин" Binding="{Binding Login}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                                 <DataGridTemplateColumn Header="Пароль" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -557,7 +729,7 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Действия" Width="150">
+                                <DataGridTemplateColumn Header="Действия" Width="200">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Button Content="Редактировать"
@@ -574,7 +746,98 @@
                 </TabItem>
 
                 <!-- Вкладка "Заявки" -->
-                <TabItem Header="Заявки" Style="{StaticResource TabItemStyle}"/>
+                <TabItem Header="Заявки" Style="{StaticResource TabItemStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Панель поиска заявок -->
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,10,0,20">
+                            <TextBox x:Name="SearchRequestBox" Width="320" Height="56"
+                                     Style="{StaticResource SearchTextBoxStyle}"
+                                     KeyDown="SearchRequestBox_KeyDown"/>
+                            <Button Content="Поиск"
+                                    Width="120"
+                                    Height="56"
+                                    Style="{StaticResource SearchButtonStyle}"
+                                    Click="SearchRequestButton_Click"/>
+                            <Button Content="Сбросить"
+                                    Width="120"
+                                    Height="56"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Click="ResetRequestButton_Click"/>
+                        </StackPanel>
+
+                        <!-- DataGrid для отображения заявок -->
+                        <DataGrid x:Name="RequestsDataGrid"
+                                  Grid.Row="1"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
+                                  RowStyle="{StaticResource DataGridRowStyle}"
+                                  CellStyle="{StaticResource DataGridCellStyle}"
+                                  SelectionMode="Single"
+                                  AlternatingRowBackground="#F9FAFB"
+                                  BorderBrush="#E0E0E0"
+                                  BorderThickness="1"
+                                  GridLinesVisibility="None"
+                                  Margin="0,0,0,20">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Фамилия" Binding="{Binding Surname}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Телефон" Binding="{Binding Phone}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Дата рождения" 
+                            Binding="{Binding DateOfBirth, StringFormat=d MMMM yyyy}" 
+                            Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Проект" Binding="{Binding ProjectName}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Описание задачи" Binding="{Binding TaskDescription}" Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Статус заявки" Binding="{Binding Status}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridTextBlockStyle}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="Действия" Width="200" 
+                                                       CellTemplate="{StaticResource RequestActionButtonsTemplate}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+
+                    </Grid>
+                </TabItem>
             </TabControl>
         </Grid>
     </Border>
