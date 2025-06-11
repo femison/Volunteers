@@ -346,7 +346,7 @@
                                   AlternatingRowBackground="#F9FAFB"
                                   BorderBrush="#E0E0E0"
                                   BorderThickness="1"
-                                  GridLinesVisibility="None">
+                                  GridLinesVisibility="None" Margin="3,0,0,61">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="ID" Binding="{Binding UserID}" Width="80">
                                     <DataGridTextColumn.ElementStyle>
@@ -492,7 +492,7 @@
                         <Button Content="Добавить проект"
                                 Click="AddProjectButton_Click"
                                 Style="{StaticResource PrimaryButtonStyle}" 
-                                Margin="14,25,1298,20" Grid.Row="2"/>
+                                Margin="14,27,1296,24" Grid.Row="2"/>
                     </Grid>
                 </TabItem>
 
